@@ -48,19 +48,6 @@ Key areas:
 - `PATCH /api/requests/[id]` - update request status (admin)
 - `DELETE /api/requests/[id]` - delete request (admin)
 
-## Configuration Notes
-
-- Default DB path: `data/break-everything.db`
-- Test DB path: set by `TEST_DB_PATH` in tests
-- Admin authentication uses cookie-based sessions
-- Required env vars:
-  - `ADMIN_PASSWORD` - admin login password used for hashing/verification
-  - `SESSION_SECRET` - entropy source for session token generation
-
-### Security Note
-
-Never commit real credentials. Keep `ADMIN_PASSWORD` and `SESSION_SECRET` in local env/runtime secret stores only.
-
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for workflow, expectations, and validation steps.
