@@ -113,6 +113,34 @@ describe("Auth API", () => {
     expect(mockCookieStore.has("be_admin_session")).toBe(true);
   });
 
+  it("POST /api/auth rate-limits repeated failed attempts", async () => {
+    for (let i = 0; i < 5; i++) {
+      const req = new NextRequest("http://localhost/api/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": "198.51.100.10",
+        },
+        body: JSON.stringify({ password: "wrong" }),
+      });
+      const res = await postAuth(req);
+      expect(res.status).toBe(401);
+    }
+
+    const blockedReq = new NextRequest("http://localhost/api/auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "198.51.100.10",
+      },
+      body: JSON.stringify({ password: "wrong" }),
+    });
+    const blockedRes = await postAuth(blockedReq);
+    expect(blockedRes.status).toBe(429);
+    const retryAfter = parseInt(blockedRes.headers.get("Retry-After") || "0");
+    expect(retryAfter).toBeGreaterThan(0);
+  });
+
   it("GET /api/auth returns authenticated after login", async () => {
     // Session was set by previous test — set it manually to be safe
     mockCookieStore.set("be_admin_session", { value: "test-token" });
@@ -179,6 +207,24 @@ describe("Tools API", () => {
     expect(data.success).toBe(true);
   });
 
+  it("POST /api/tools returns 500 for duplicate slug", async () => {
+    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Duplicate Slug Tool",
+      slug: "pdf-forge",
+      description: "Should fail on duplicate slug",
+      short_description: "duplicate",
+      category: "test",
+      download_url: "https://example.com/dupe",
+      github_url: "https://github.com/test/dupe",
+    });
+
+    const res = await postTool(req);
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toMatch(/unique|constraint/i);
+  });
+
   it("GET /api/tools/[slug] returns the created tool", async () => {
     const req = jsonRequest("http://localhost/api/tools/api-test-tool", "GET");
     const params = Promise.resolve({ slug: "api-test-tool" });
@@ -217,6 +263,24 @@ describe("Tools API", () => {
     expect(data.tool.name).toBe("API Test Tool Renamed");
   });
 
+  it("PUT /api/tools/[slug] on missing slug is a no-op success", async () => {
+    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    const req = jsonRequest("http://localhost/api/tools/nope", "PUT", {
+      name: "Does not exist",
+      description: "Still returns success",
+      short_description: "noop",
+      category: "test",
+      download_url: "https://example.com/nope",
+      github_url: "https://github.com/test/nope",
+      platform: "windows",
+    });
+    const params = Promise.resolve({ slug: "nope" });
+    const res = await putTool(req, { params });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+  });
+
   it("DELETE /api/tools/[slug] removes a tool when authenticated", async () => {
     mockCookieStore.set("be_admin_session", { value: "test-token" });
     const req = jsonRequest("http://localhost/api/tools/api-test-tool", "DELETE");
@@ -229,6 +293,16 @@ describe("Tools API", () => {
       params: Promise.resolve({ slug: "api-test-tool" }),
     });
     expect(getRes.status).toBe(404);
+  });
+
+  it("DELETE /api/tools/[slug] on missing slug is idempotent success", async () => {
+    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    const req = jsonRequest("http://localhost/api/tools/nope", "DELETE");
+    const params = Promise.resolve({ slug: "nope" });
+    const res = await deleteToolRoute(req, { params });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
   });
 });
 
@@ -262,6 +336,28 @@ describe("Requests API", () => {
     });
     const res = await postRequest(req);
     expect(res.status).toBe(400);
+  });
+
+  it("POST /api/requests trims user input and persists normalized values", async () => {
+    const req = jsonRequest("http://localhost/api/requests", "POST", {
+      tool_name: "  Trimmed Tool  ",
+      description: "  Needs cleanup  ",
+      submitted_by: "  Evan  ",
+      link: "  https://example.com/tool  ",
+    });
+    const res = await postRequest(req);
+    expect(res.status).toBe(201);
+
+    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    const listReq = jsonRequest("http://localhost/api/requests", "GET");
+    const listRes = await getRequests(listReq);
+    expect(listRes.status).toBe(200);
+    const data = await listRes.json();
+    const created = data.requests.find((r: { tool_name: string }) => r.tool_name === "Trimmed Tool");
+    expect(created).toBeDefined();
+    expect(created.description).toBe("Needs cleanup");
+    expect(created.submitted_by).toBe("Evan");
+    expect(created.link).toBe("https://example.com/tool");
   });
 
   it("GET /api/requests is admin-only", async () => {

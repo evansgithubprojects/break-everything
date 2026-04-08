@@ -90,19 +90,18 @@ describe("checkRateLimit", () => {
   it("resets after the time window expires", () => {
     const config = uniqueBucket(1, 1); // 1 second window
     const req = makeRequest();
+    const now = new Date("2026-04-07T00:00:00.000Z").getTime();
+    jest.useFakeTimers({ now });
+    try {
+      expect(checkRateLimit(req, config)).toBeNull();
+      expect(checkRateLimit(req, config)).not.toBeNull();
 
-    expect(checkRateLimit(req, config)).toBeNull();
-    expect(checkRateLimit(req, config)).not.toBeNull();
-
-    // Manually expire the entry by manipulating the store
-    // The window is 1s, so we simulate time passing by calling again
-    // after the window. We use jest fake timers for this.
-    jest.useFakeTimers();
-    jest.advanceTimersByTime(1500);
-
-    expect(checkRateLimit(req, config)).toBeNull();
-
-    jest.useRealTimers();
+      // Advance beyond the 1s window so the limiter entry expires.
+      jest.advanceTimersByTime(1500);
+      expect(checkRateLimit(req, config)).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("falls back to 'unknown' when no IP headers present", () => {
