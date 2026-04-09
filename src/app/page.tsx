@@ -43,7 +43,7 @@ export default async function HomePage() {
               Browse Tools
             </Link>
             <a
-              href="https://github.com"
+              href="https://github.com/evansgithubprojects/break-everything"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 rounded-xl font-medium text-sm glass-card text-foreground/70 hover:text-foreground"
