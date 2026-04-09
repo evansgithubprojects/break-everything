@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import ToolCard from "@/components/tools/ToolCard";
 import RequestToolForm from "@/components/forms/RequestToolForm";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 
 export default function ToolsPage() {
   const [tools, setTools] = useState<Tool[]>([]);

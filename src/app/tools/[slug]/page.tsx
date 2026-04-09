@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SafetyCertificate from "@/components/tools/SafetyCertificate";
 import { getToolBySlug } from "@/server/db";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 
 export const dynamic = "force-dynamic";
 

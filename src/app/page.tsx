@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ToolCard from "@/components/tools/ToolCard";
 import { getAllTools, getToolCount, getTotalDownloads } from "@/server/db";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 
 export const dynamic = "force-dynamic";
 

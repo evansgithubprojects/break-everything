@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import AdminToolForm from "@/components/forms/AdminToolForm";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 
 interface ToolRequest {
   id: number;

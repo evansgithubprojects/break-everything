@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 
 interface AdminToolFormProps {
   tool?: Tool | null;

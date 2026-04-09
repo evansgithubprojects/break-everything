@@ -21,6 +21,8 @@ src/
 |   |-- layout/             # App shell components (header/footer/background)
 |   |-- tools/              # Tool-domain display components
 |   `-- index.ts            # Barrel exports for component domains
+|-- types/                  # Shared TypeScript domain types
+|   `-- index.ts            # Barrel exports for shared types
 `-- server/                 # Server-only modules (DB, auth, rate limits)
     |-- __tests__/          # Server module tests (co-located)
     `-- index.ts            # Barrel exports for server modules
@@ -33,6 +35,7 @@ data/                       # SQLite databases and local test DBs
 
 - Keep Next.js routing logic in `src/app` only.
 - Keep reusable UI in `src/components`, organized by role (`layout`, `forms`, `tools`).
+- Keep shared domain types in `src/types` (not inside UI component files).
 - Keep all server-only logic in `src/server`; do not import it into Client Components.
 - Co-locate tests under the nearest module `__tests__` directory.
 - Use `@/` absolute imports and avoid deep relative paths.

@@ -37,7 +37,7 @@ import {
   updateToolRequestStatus,
   deleteToolRequest,
 } from "@/server/db";
-import type { Tool } from "@/components/tools/ToolCard";
+import type { Tool } from "@/types";
 import type { ToolRequest } from "@/server/db";
 
 beforeAll(async () => {
