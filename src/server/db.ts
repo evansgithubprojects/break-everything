@@ -15,6 +15,22 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 let db: Client | null = null;
 let initPromise: Promise<void> | null = null;
 
+/** Next.js sets this during `next build` — avoid touching Turso/SQLite during compile. */
+function isNextProductionBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
+/** Sample tools are never inserted in production; tests keep seeds via NODE_ENV=test; local dev opt-in. */
+function shouldSeedToolLibrary(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  if (process.env.NODE_ENV === "test") {
+    return true;
+  }
+  return process.env.SEED_TOOL_LIBRARY === "1";
+}
+
 function resolveDatabaseUrl(): string {
   if (process.env.TURSO_DATABASE_URL) {
     return process.env.TURSO_DATABASE_URL;
@@ -59,6 +75,9 @@ function getDb(): Client {
 }
 
 async function ensureInitialized(): Promise<void> {
+  if (isNextProductionBuild()) {
+    return;
+  }
   if (!initPromise) {
     initPromise = initSchema(getDb());
   }
@@ -75,10 +94,18 @@ export async function _closeDb() {
 }
 
 export async function initDb(): Promise<void> {
+  if (isNextProductionBuild()) {
+    throw new Error("initDb() must not run during `next build`.");
+  }
   await ensureInitialized();
 }
 
 async function execute(sql: string, args: InArgs = []): Promise<ResultSet> {
+  if (isNextProductionBuild()) {
+    throw new Error(
+      "Database access during `next build` is disabled. Pages that use the DB should stay dynamic/runtime-only."
+    );
+  }
   await ensureInitialized();
   return getDb().execute({ sql, args });
 }
@@ -158,7 +185,15 @@ async function initSchema(client: Client) {
     });
   }
 
-  await seedTools(client);
+  if (!shouldSeedToolLibrary()) {
+    return;
+  }
+
+  const toolCountResult = await client.execute("SELECT COUNT(*) as count FROM tools");
+  const count = Number(toolCountResult.rows[0]?.count ?? 0);
+  if (count === 0) {
+    await seedTools(client);
+  }
 }
 
 async function seedTools(client: Client) {
