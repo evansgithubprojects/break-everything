@@ -1,4 +1,4 @@
-import type { Tool } from "./ToolCard";
+import type { Tool } from "@/types";
 
 export default function SafetyCertificate({ tool }: { tool: Tool }) {
   const scoreColor =
