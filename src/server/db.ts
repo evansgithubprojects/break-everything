@@ -140,16 +140,17 @@ async function initSchema(client: Client) {
     throw new Error("Missing ADMIN_PASSWORD environment variable.");
   }
 
+  // Idempotent bootstrap for concurrent initializers (multiple prod instances/cold starts).
+  const bootstrapHash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
+  await client.execute({
+    sql: "INSERT OR IGNORE INTO admin (id, password_hash) VALUES (1, ?)",
+    args: [bootstrapHash],
+  });
+
   const adminRow = await client.execute("SELECT password_hash FROM admin WHERE id = 1");
   const existingHash = adminRow.rows[0]?.password_hash as string | undefined;
 
-  if (!existingHash) {
-    const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-    await client.execute({
-      sql: "INSERT INTO admin (id, password_hash) VALUES (1, ?)",
-      args: [hash],
-    });
-  } else if (!bcrypt.compareSync(ADMIN_PASSWORD, existingHash)) {
+  if (existingHash && !bcrypt.compareSync(ADMIN_PASSWORD, existingHash)) {
     const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
     await client.execute({
       sql: "UPDATE admin SET password_hash = ? WHERE id = 1",
@@ -157,11 +158,7 @@ async function initSchema(client: Client) {
     });
   }
 
-  const toolCountResult = await client.execute("SELECT COUNT(*) as count FROM tools");
-  const count = Number(toolCountResult.rows[0]?.count ?? 0);
-  if (count === 0) {
-    await seedTools(client);
-  }
+  await seedTools(client);
 }
 
 async function seedTools(client: Client) {
@@ -217,7 +214,7 @@ async function seedTools(client: Client) {
   ];
 
   const statements: InStatement[] = seeds.map((tool) => ({
-    sql: `INSERT INTO tools (
+    sql: `INSERT OR IGNORE INTO tools (
       name, slug, description, short_description, category, icon, download_url, github_url,
       platform, sha256_hash, safety_score, last_scan_date, downloads
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
