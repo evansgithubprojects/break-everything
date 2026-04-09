@@ -11,7 +11,7 @@ export async function GET(
   if (blocked) return blocked;
 
   const { slug } = await params;
-  const tool = getToolBySlug(slug);
+  const tool = await getToolBySlug(slug);
   if (!tool) {
     return NextResponse.json({ error: "Tool not found" }, { status: 404 });
   }
@@ -34,7 +34,7 @@ export async function PUT(
   const body = await request.json();
 
   try {
-    updateTool(slug, {
+    await updateTool(slug, {
       name: body.name,
       description: body.description,
       short_description: body.short_description,
@@ -67,6 +67,6 @@ export async function DELETE(
   }
 
   const { slug } = await params;
-  deleteTool(slug);
+  await deleteTool(slug);
   return NextResponse.json({ success: true });
 }

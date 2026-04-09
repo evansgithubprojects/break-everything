@@ -15,7 +15,7 @@ function generateToken(): string {
 }
 
 export async function login(password: string): Promise<boolean> {
-  if (!verifyAdminPassword(password)) {
+  if (!(await verifyAdminPassword(password))) {
     return false;
   }
 

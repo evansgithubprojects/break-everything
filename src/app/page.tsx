@@ -5,10 +5,10 @@ import type { Tool } from "@/components/tools/ToolCard";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const tools = getAllTools() as Tool[];
-  const toolCount = getToolCount();
-  const totalDownloads = getTotalDownloads();
+export default async function HomePage() {
+  const tools = (await getAllTools()) as Tool[];
+  const toolCount = await getToolCount();
+  const totalDownloads = await getTotalDownloads();
 
   const featured = tools.slice(0, 6);
 

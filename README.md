@@ -19,8 +19,16 @@ Break Everything helps users discover downloadable tools, review trust signals (
 - React
 - TypeScript
 - SQLite via `better-sqlite3`
+- Turso/libSQL via `@libsql/client` (production-ready client)
 - Jest (`ts-jest`) for tests
 - ESLint for linting
+
+## Environment Variables
+
+- `ADMIN_PASSWORD` - admin login password hash source (required)
+- `SESSION_SECRET` - cookie/session signing secret (required)
+- `TURSO_DATABASE_URL` - Turso database URL (required for production Turso client)
+- `TURSO_AUTH_TOKEN` - Turso auth token (required for production Turso client)
 
 ## Project Structure
 

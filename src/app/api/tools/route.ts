@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const blocked = rateLimiters.publicRead(request);
   if (blocked) return blocked;
 
-  const tools = getAllTools();
+  const tools = await getAllTools();
   return NextResponse.json({ tools });
 }
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = createTool({
+    const result = await createTool({
       name: body.name,
       slug: body.slug,
       description: body.description,
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       safety_score: body.safety_score ?? 100,
       last_scan_date: body.last_scan_date || null,
     });
-    return NextResponse.json({ success: true, id: result.lastInsertRowid }, { status: 201 });
+    return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

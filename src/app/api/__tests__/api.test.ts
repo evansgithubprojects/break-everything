@@ -4,6 +4,16 @@ import fs from "fs";
 const TEST_DB_DIR = path.join(process.cwd(), "data", "test");
 const TEST_DB_PATH = path.join(TEST_DB_DIR, "test-api.db");
 
+function safeUnlink(filePath: string) {
+  if (!fs.existsSync(filePath)) return;
+  try {
+    fs.unlinkSync(filePath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EBUSY") throw error;
+  }
+}
+
 process.env.TEST_DB_PATH = TEST_DB_PATH;
 process.env.ADMIN_PASSWORD = "test-admin-password";
 process.env.SESSION_SECRET = "test-session-secret";
@@ -20,7 +30,7 @@ jest.mock("next/headers", () => ({
 }));
 
 import { NextRequest } from "next/server";
-import { getDb, _closeDb } from "@/server/db";
+import { initDb, _closeDb } from "@/server/db";
 
 // Import route handlers
 import { GET as getTools, POST as postTool } from "@/app/api/tools/route";
@@ -39,24 +49,24 @@ import {
   POST as postRequest,
 } from "@/app/api/requests/route";
 
-beforeAll(() => {
+beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR)) {
     fs.mkdirSync(TEST_DB_DIR, { recursive: true });
   }
-  if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+  safeUnlink(TEST_DB_PATH);
   for (const ext of ["-wal", "-shm"]) {
     const f = TEST_DB_PATH + ext;
-    if (fs.existsSync(f)) fs.unlinkSync(f);
+    safeUnlink(f);
   }
-  getDb();
+  await initDb();
 });
 
-afterAll(() => {
-  _closeDb();
-  if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+afterAll(async () => {
+  await _closeDb();
+  safeUnlink(TEST_DB_PATH);
   for (const ext of ["-wal", "-shm"]) {
     const f = TEST_DB_PATH + ext;
-    if (fs.existsSync(f)) fs.unlinkSync(f);
+    safeUnlink(f);
   }
 });
 

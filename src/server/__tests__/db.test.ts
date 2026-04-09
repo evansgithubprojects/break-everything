@@ -4,12 +4,22 @@ import fs from "fs";
 const TEST_DB_DIR = path.join(process.cwd(), "data", "test");
 const TEST_DB_PATH = path.join(TEST_DB_DIR, "test.db");
 
+function safeUnlink(filePath: string) {
+  if (!fs.existsSync(filePath)) return;
+  try {
+    fs.unlinkSync(filePath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EBUSY") throw error;
+  }
+}
+
 // Point the DB module to our test database before importing
 process.env.TEST_DB_PATH = TEST_DB_PATH;
 process.env.ADMIN_PASSWORD = "test-admin-password";
 
 import {
-  getDb,
+  initDb,
   _closeDb,
   getAllTools,
   getToolBySlug,
@@ -30,84 +40,82 @@ import {
 import type { Tool } from "@/components/tools/ToolCard";
 import type { ToolRequest } from "@/server/db";
 
-beforeAll(() => {
+beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR)) {
     fs.mkdirSync(TEST_DB_DIR, { recursive: true });
   }
   // Ensure clean state — delete any leftover test DB
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
-  }
+  safeUnlink(TEST_DB_PATH);
   // WAL mode creates these companion files
   for (const ext of ["-wal", "-shm"]) {
     const f = TEST_DB_PATH + ext;
-    if (fs.existsSync(f)) fs.unlinkSync(f);
+    safeUnlink(f);
   }
   // Initialize the DB (triggers schema + seed)
-  getDb();
+  await initDb();
 });
 
-afterAll(() => {
-  _closeDb();
-  if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+afterAll(async () => {
+  await _closeDb();
+  safeUnlink(TEST_DB_PATH);
   for (const ext of ["-wal", "-shm"]) {
     const f = TEST_DB_PATH + ext;
-    if (fs.existsSync(f)) fs.unlinkSync(f);
+    safeUnlink(f);
   }
 });
 
 // --- Tools CRUD ---
 
 describe("Tools CRUD", () => {
-  it("seeds 3 default tools on init", () => {
-    const tools = getAllTools() as Tool[];
+  it("seeds 3 default tools on init", async () => {
+    const tools = (await getAllTools()) as Tool[];
     expect(tools.length).toBe(3);
   });
 
-  it("getAllTools returns tools sorted by downloads descending", () => {
-    const tools = getAllTools() as Tool[];
+  it("getAllTools returns tools sorted by downloads descending", async () => {
+    const tools = (await getAllTools()) as Tool[];
     for (let i = 1; i < tools.length; i++) {
       expect(tools[i - 1].downloads).toBeGreaterThanOrEqual(tools[i].downloads);
     }
   });
 
-  it("getToolBySlug returns the correct tool", () => {
-    const tool = getToolBySlug("pdf-forge") as Tool;
+  it("getToolBySlug returns the correct tool", async () => {
+    const tool = (await getToolBySlug("pdf-forge")) as Tool;
     expect(tool).toBeDefined();
     expect(tool.name).toBe("PDF Forge");
     expect(tool.category).toBe("pdf");
   });
 
-  it("getToolBySlug returns undefined for non-existent slug", () => {
-    const tool = getToolBySlug("non-existent");
+  it("getToolBySlug returns undefined for non-existent slug", async () => {
+    const tool = await getToolBySlug("non-existent");
     expect(tool).toBeUndefined();
   });
 
-  it("getToolsByCategory filters correctly", () => {
-    const pdfTools = getToolsByCategory("pdf") as Tool[];
+  it("getToolsByCategory filters correctly", async () => {
+    const pdfTools = (await getToolsByCategory("pdf")) as Tool[];
     expect(pdfTools.length).toBe(1);
     expect(pdfTools[0].slug).toBe("pdf-forge");
   });
 
-  it("getCategories returns all unique categories", () => {
-    const cats = getCategories();
+  it("getCategories returns all unique categories", async () => {
+    const cats = await getCategories();
     expect(cats).toContain("pdf");
     expect(cats).toContain("converter");
     expect(cats).toContain("utility");
     expect(cats.length).toBe(3);
   });
 
-  it("getToolCount returns correct count", () => {
-    expect(getToolCount()).toBe(3);
+  it("getToolCount returns correct count", async () => {
+    expect(await getToolCount()).toBe(3);
   });
 
-  it("getTotalDownloads sums all downloads", () => {
-    const total = getTotalDownloads();
+  it("getTotalDownloads sums all downloads", async () => {
+    const total = await getTotalDownloads();
     expect(total).toBe(12450 + 8320 + 5640);
   });
 
-  it("createTool adds a new tool", () => {
-    createTool({
+  it("createTool adds a new tool", async () => {
+    await createTool({
       name: "TestTool",
       slug: "test-tool",
       description: "A test tool",
@@ -122,15 +130,15 @@ describe("Tools CRUD", () => {
       last_scan_date: "2026-04-01",
     });
 
-    const tool = getToolBySlug("test-tool") as Tool;
+    const tool = (await getToolBySlug("test-tool")) as Tool;
     expect(tool).toBeDefined();
     expect(tool.name).toBe("TestTool");
     expect(tool.safety_score).toBe(90);
-    expect(getToolCount()).toBe(4);
+    expect(await getToolCount()).toBe(4);
   });
 
-  it("createTool rejects duplicate slugs", () => {
-    expect(() =>
+  it("createTool rejects duplicate slugs", async () => {
+    await expect(
       createTool({
         name: "Dupe",
         slug: "test-tool",
@@ -145,11 +153,11 @@ describe("Tools CRUD", () => {
         safety_score: 100,
         last_scan_date: null,
       })
-    ).toThrow();
+    ).rejects.toThrow();
   });
 
-  it("updateTool modifies fields", () => {
-    updateTool("test-tool", {
+  it("updateTool modifies fields", async () => {
+    await updateTool("test-tool", {
       name: "TestTool Updated",
       description: "Updated description",
       short_description: "Updated",
@@ -163,102 +171,102 @@ describe("Tools CRUD", () => {
       last_scan_date: "2026-04-05",
     });
 
-    const tool = getToolBySlug("test-tool") as Tool;
+    const tool = (await getToolBySlug("test-tool")) as Tool;
     expect(tool.name).toBe("TestTool Updated");
     expect(tool.platform).toBe("windows,mac");
     expect(tool.safety_score).toBe(95);
   });
 
-  it("deleteTool removes the tool", () => {
-    deleteTool("test-tool");
-    expect(getToolBySlug("test-tool")).toBeUndefined();
-    expect(getToolCount()).toBe(3);
+  it("deleteTool removes the tool", async () => {
+    await deleteTool("test-tool");
+    expect(await getToolBySlug("test-tool")).toBeUndefined();
+    expect(await getToolCount()).toBe(3);
   });
 });
 
 // --- Admin Auth ---
 
 describe("Admin password verification", () => {
-  it("accepts the correct password", () => {
-    expect(verifyAdminPassword("test-admin-password")).toBe(true);
+  it("accepts the correct password", async () => {
+    expect(await verifyAdminPassword("test-admin-password")).toBe(true);
   });
 
-  it("rejects an incorrect password", () => {
-    expect(verifyAdminPassword("wrong-password")).toBe(false);
+  it("rejects an incorrect password", async () => {
+    expect(await verifyAdminPassword("wrong-password")).toBe(false);
   });
 
-  it("rejects empty string", () => {
-    expect(verifyAdminPassword("")).toBe(false);
+  it("rejects empty string", async () => {
+    expect(await verifyAdminPassword("")).toBe(false);
   });
 });
 
 // --- Tool Requests ---
 
 describe("Tool Requests CRUD", () => {
-  it("starts with no requests", () => {
-    const reqs = getAllToolRequests();
+  it("starts with no requests", async () => {
+    const reqs = await getAllToolRequests();
     expect(reqs.length).toBe(0);
   });
 
-  it("createToolRequest adds a request with pending status", () => {
-    createToolRequest({
+  it("createToolRequest adds a request with pending status", async () => {
+    await createToolRequest({
       tool_name: "Notion Clone",
       description: "A free open-source Notion alternative",
       submitted_by: "Alice",
       link: "https://github.com/example/notion-clone",
     });
 
-    const reqs = getAllToolRequests() as ToolRequest[];
+    const reqs = (await getAllToolRequests()) as ToolRequest[];
     expect(reqs.length).toBe(1);
     expect(reqs[0].tool_name).toBe("Notion Clone");
     expect(reqs[0].status).toBe("pending");
     expect(reqs[0].submitted_by).toBe("Alice");
   });
 
-  it("createToolRequest works with optional fields omitted", () => {
-    createToolRequest({
+  it("createToolRequest works with optional fields omitted", async () => {
+    await createToolRequest({
       tool_name: "Anon Tool",
       description: "Some tool",
     });
 
-    const reqs = getAllToolRequests() as ToolRequest[];
+    const reqs = (await getAllToolRequests()) as ToolRequest[];
     expect(reqs.length).toBe(2);
     const anon = reqs.find((r) => r.tool_name === "Anon Tool")!;
     expect(anon.submitted_by).toBeNull();
     expect(anon.link).toBeNull();
   });
 
-  it("getPendingToolRequests only returns pending ones", () => {
-    const pending = getPendingToolRequests();
+  it("getPendingToolRequests only returns pending ones", async () => {
+    const pending = await getPendingToolRequests();
     expect(pending.length).toBe(2);
   });
 
-  it("updateToolRequestStatus changes the status", () => {
-    const reqs = getAllToolRequests() as ToolRequest[];
+  it("updateToolRequestStatus changes the status", async () => {
+    const reqs = (await getAllToolRequests()) as ToolRequest[];
     const first = reqs[reqs.length - 1]; // oldest
 
-    updateToolRequestStatus(first.id, "approved");
+    await updateToolRequestStatus(first.id, "approved");
 
-    const updated = getAllToolRequests() as ToolRequest[];
+    const updated = (await getAllToolRequests()) as ToolRequest[];
     const found = updated.find((r) => r.id === first.id)!;
     expect(found.status).toBe("approved");
 
-    const pending = getPendingToolRequests();
+    const pending = await getPendingToolRequests();
     expect(pending.length).toBe(1);
   });
 
-  it("deleteToolRequest removes a request", () => {
-    const reqs = getAllToolRequests() as ToolRequest[];
-    deleteToolRequest(reqs[0].id);
+  it("deleteToolRequest removes a request", async () => {
+    const reqs = (await getAllToolRequests()) as ToolRequest[];
+    await deleteToolRequest(reqs[0].id);
 
-    expect(getAllToolRequests().length).toBe(1);
+    expect((await getAllToolRequests()).length).toBe(1);
   });
 
   // Clean up remaining
-  afterAll(() => {
-    const reqs = getAllToolRequests() as ToolRequest[];
+  afterAll(async () => {
+    const reqs = (await getAllToolRequests()) as ToolRequest[];
     for (const r of reqs) {
-      deleteToolRequest(r.id);
+      await deleteToolRequest(r.id);
     }
   });
 });

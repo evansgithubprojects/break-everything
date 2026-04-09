@@ -12,7 +12,7 @@ export default async function ToolDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const tool = getToolBySlug(slug) as Tool | undefined;
+  const tool = (await getToolBySlug(slug)) as Tool | undefined;
 
   if (!tool) {
     notFound();

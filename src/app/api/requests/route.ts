@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (!authed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const requests = getAllToolRequests();
+  const requests = await getAllToolRequests();
   return NextResponse.json({ requests });
 }
 
@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    createToolRequest({
+    await createToolRequest({
       tool_name: body.tool_name.trim(),
       description: body.description.trim(),
       submitted_by: body.submitted_by?.trim() || undefined,
       link: body.link?.trim() || undefined,
     });
 
-    const pendingCount = getPendingToolRequests().length;
+    const pendingCount = (await getPendingToolRequests()).length;
     return NextResponse.json({ success: true, pendingCount }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

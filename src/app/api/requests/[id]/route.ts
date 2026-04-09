@@ -22,7 +22,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  updateToolRequestStatus(parseInt(id), status);
+  await updateToolRequestStatus(parseInt(id), status);
   return NextResponse.json({ success: true });
 }
 
@@ -39,6 +39,6 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  deleteToolRequest(parseInt(id));
+  await deleteToolRequest(parseInt(id));
   return NextResponse.json({ success: true });
 }
