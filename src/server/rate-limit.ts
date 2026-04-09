@@ -29,12 +29,25 @@ function pruneIfNeeded() {
   }
 }
 
+function trustForwardedChain(): boolean {
+  return process.env.VERCEL === "1" || process.env.TRUST_FORWARDED_FOR === "true";
+}
+
 function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  const cf = request.headers.get("cf-connecting-ip")?.trim();
+  if (cf) return cf;
+
+  if (trustForwardedChain()) {
+    const vercel = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+    if (vercel) return vercel;
+    const xff = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (xff) return xff;
+  }
+
+  const real = request.headers.get("x-real-ip")?.trim();
+  if (real) return real;
+
+  return "unknown";
 }
 
 interface RateLimitConfig {

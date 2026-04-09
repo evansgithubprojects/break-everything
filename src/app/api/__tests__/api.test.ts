@@ -74,6 +74,13 @@ beforeEach(() => {
   mockCookieStore.clear();
 });
 
+async function loginAsAdmin() {
+  const req = jsonRequest("http://localhost/api/auth", "POST", {
+    password: "test-admin-password",
+  });
+  await postAuth(req);
+}
+
 function jsonRequest(url: string, method: string, body?: object): NextRequest {
   const init: RequestInit = {
     method,
@@ -152,8 +159,7 @@ describe("Auth API", () => {
   });
 
   it("GET /api/auth returns authenticated after login", async () => {
-    // Session was set by previous test — set it manually to be safe
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/auth", "GET");
     const res = await getAuth(req);
     const data = await res.json();
@@ -161,7 +167,7 @@ describe("Auth API", () => {
   });
 
   it("DELETE /api/auth clears session", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     await deleteAuth();
     expect(mockCookieStore.has("be_admin_session")).toBe(false);
   });
@@ -191,8 +197,23 @@ describe("Tools API", () => {
     expect(res.status).toBe(401);
   });
 
+  it("POST /api/tools rejects forged session cookie", async () => {
+    mockCookieStore.set("be_admin_session", { value: "not-a-valid-token" });
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Forged",
+      slug: "forged-tool",
+      description: "desc",
+      short_description: "short",
+      category: "test",
+      download_url: "https://example.com",
+      github_url: "https://github.com/test",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(401);
+  });
+
   it("POST /api/tools rejects missing required fields when authenticated", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Incomplete Tool",
     });
@@ -201,7 +222,7 @@ describe("Tools API", () => {
   });
 
   it("POST /api/tools creates a tool when authenticated", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "API Test Tool",
       slug: "api-test-tool",
@@ -218,7 +239,7 @@ describe("Tools API", () => {
   });
 
   it("POST /api/tools returns 500 for duplicate slug", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Duplicate Slug Tool",
       slug: "pdf-forge",
@@ -232,7 +253,7 @@ describe("Tools API", () => {
     const res = await postTool(req);
     expect(res.status).toBe(500);
     const data = await res.json();
-    expect(data.error).toMatch(/unique|constraint/i);
+    expect(data.error).toBe("Something went wrong.");
   });
 
   it("GET /api/tools/[slug] returns the created tool", async () => {
@@ -251,7 +272,7 @@ describe("Tools API", () => {
   });
 
   it("PUT /api/tools/[slug] updates a tool when authenticated", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools/api-test-tool", "PUT", {
       name: "API Test Tool Renamed",
       description: "Updated",
@@ -274,7 +295,7 @@ describe("Tools API", () => {
   });
 
   it("PUT /api/tools/[slug] on missing slug is a no-op success", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools/nope", "PUT", {
       name: "Does not exist",
       description: "Still returns success",
@@ -292,7 +313,7 @@ describe("Tools API", () => {
   });
 
   it("DELETE /api/tools/[slug] removes a tool when authenticated", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools/api-test-tool", "DELETE");
     const params = Promise.resolve({ slug: "api-test-tool" });
     const res = await deleteToolRoute(req, { params });
@@ -306,7 +327,7 @@ describe("Tools API", () => {
   });
 
   it("DELETE /api/tools/[slug] on missing slug is idempotent success", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools/nope", "DELETE");
     const params = Promise.resolve({ slug: "nope" });
     const res = await deleteToolRoute(req, { params });
@@ -358,7 +379,7 @@ describe("Requests API", () => {
     const res = await postRequest(req);
     expect(res.status).toBe(201);
 
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const listReq = jsonRequest("http://localhost/api/requests", "GET");
     const listRes = await getRequests(listReq);
     expect(listRes.status).toBe(200);
@@ -377,7 +398,7 @@ describe("Requests API", () => {
   });
 
   it("GET /api/requests returns requests when authenticated", async () => {
-    mockCookieStore.set("be_admin_session", { value: "test-token" });
+    await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/requests", "GET");
     const res = await getRequests(req);
     expect(res.status).toBe(200);

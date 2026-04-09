@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToolBySlug, updateTool, deleteTool } from "@/server/db";
 import { isAuthenticated } from "@/server/auth";
 import { rateLimiters } from "@/server/rate-limit";
+import { jsonServerError } from "@/server/api-response";
+import { isAllowedHttpUrl, isValidToolSlug } from "@/server/validation";
 
 export async function GET(
   request: NextRequest,
@@ -31,7 +33,21 @@ export async function PUT(
   }
 
   const { slug } = await params;
+  if (!isValidToolSlug(slug)) {
+    return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
+  }
+
   const body = await request.json();
+
+  if (
+    !isAllowedHttpUrl(String(body.download_url)) ||
+    !isAllowedHttpUrl(String(body.github_url))
+  ) {
+    return NextResponse.json(
+      { error: "download_url and github_url must be valid http(s) URLs" },
+      { status: 400 }
+    );
+  }
 
   try {
     await updateTool(slug, {
@@ -49,8 +65,7 @@ export async function PUT(
     });
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonServerError(err);
   }
 }
 
@@ -67,6 +82,10 @@ export async function DELETE(
   }
 
   const { slug } = await params;
+  if (!isValidToolSlug(slug)) {
+    return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
+  }
+
   await deleteTool(slug);
   return NextResponse.json({ success: true });
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllTools, createTool } from "@/server/db";
 import { isAuthenticated } from "@/server/auth";
 import { rateLimiters } from "@/server/rate-limit";
+import { jsonServerError } from "@/server/api-response";
+import { isAllowedHttpUrl, isValidToolSlug } from "@/server/validation";
 
 export async function GET(request: NextRequest) {
   const blocked = rateLimiters.publicRead(request);
@@ -31,6 +33,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (!isValidToolSlug(String(body.slug))) {
+    return NextResponse.json(
+      { error: "Invalid slug: use lowercase letters, numbers, and hyphens only" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !isAllowedHttpUrl(String(body.download_url)) ||
+    !isAllowedHttpUrl(String(body.github_url))
+  ) {
+    return NextResponse.json(
+      { error: "download_url and github_url must be valid http(s) URLs" },
+      { status: 400 }
+    );
+  }
+
   try {
     const result = await createTool({
       name: body.name,
@@ -48,7 +67,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) }, { status: 201 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonServerError(err);
   }
 }

@@ -6,6 +6,8 @@ import {
 } from "@/server/db";
 import { isAuthenticated } from "@/server/auth";
 import { rateLimiters } from "@/server/rate-limit";
+import { jsonServerError } from "@/server/api-response";
+import { isAllowedHttpUrl } from "@/server/validation";
 
 export async function GET(request: NextRequest) {
   const blocked = rateLimiters.publicRead(request);
@@ -39,18 +41,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const submittedBy = body.submitted_by?.trim();
+  if (submittedBy && submittedBy.length > 200) {
+    return NextResponse.json({ error: "submitted_by is too long" }, { status: 400 });
+  }
+
+  const link = body.link?.trim();
+  if (link && !isAllowedHttpUrl(link)) {
+    return NextResponse.json(
+      { error: "link must be a valid http(s) URL" },
+      { status: 400 }
+    );
+  }
+
   try {
     await createToolRequest({
       tool_name: body.tool_name.trim(),
       description: body.description.trim(),
-      submitted_by: body.submitted_by?.trim() || undefined,
-      link: body.link?.trim() || undefined,
+      submitted_by: submittedBy || undefined,
+      link: link || undefined,
     });
 
     const pendingCount = (await getPendingToolRequests()).length;
     return NextResponse.json({ success: true, pendingCount }, { status: 201 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonServerError(err);
   }
 }

@@ -3,6 +3,7 @@ import type { Config } from "jest";
 const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
+  setupFiles: ["<rootDir>/src/test-env.ts"],
   roots: ["<rootDir>/src"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
