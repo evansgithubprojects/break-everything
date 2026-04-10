@@ -50,7 +50,7 @@ export default function Header() {
             );
           })}
           <a
-            href="https://github.com/evansgithubprojects/break-everything"
+            href="https://github.com/break-everything/break-everything"
             target="_blank"
             rel="noopener noreferrer"
             className="ml-2 px-4 py-2 text-sm font-medium text-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors border border-transparent hover:border-card-border rounded-none"
