@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -6,9 +7,21 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              <span className="gradient-text">Break</span>{" "}
-              <span className="text-foreground/80">Everything</span>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-3 text-lg font-bold tracking-tight"
+            >
+              <Image
+                src="/logo-lockup.png"
+                alt=""
+                width={44}
+                height={44}
+                className="shrink-0"
+              />
+              <span>
+                <span className="gradient-text">Break</span>{" "}
+                <span className="text-foreground/80">Everything</span>
+              </span>
             </Link>
             <p className="mt-3 text-sm text-foreground/50 max-w-xs">
               Free, open-source tools for students who&apos;d rather build than pay. Source links on every listing.

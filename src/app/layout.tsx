@@ -15,10 +15,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Break Everything — Free Tools for Students",
   description:
     "A curated, open-source tool directory for students — build-ready listings with source links and clear details.",
+  icons: {
+    icon: [{ url: "/logo-mark.png", type: "image/png" }],
+    apple: "/logo-mark.png",
+  },
+  openGraph: {
+    title: "Break Everything — Free Tools for Students",
+    description:
+      "A curated, open-source tool directory for students — build-ready listings with source links and clear details.",
+    images: [{ url: "/logo-lockup.png", alt: "Break Everything" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/logo-lockup.png"],
+  },
 };
 
 export default function RootLayout({

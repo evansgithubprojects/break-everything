@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,15 +16,15 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b-2 border-card-border bg-background/85 backdrop-blur-xl shadow-[inset_0_-1px_0_rgba(91,143,199,0.12)]">
       <div className="mx-auto max-w-6xl flex items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative w-9 h-9 rounded-md gradient-border bg-card-bg flex items-center justify-center overflow-hidden shrink-0">
-            <div
-              className="absolute inset-0 bg-gradient-to-br from-accent-amber/35 via-transparent to-accent-steel/25"
-              style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
-              aria-hidden
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-none border border-card-border bg-background">
+            <Image
+              src="/logo-mark.png"
+              alt=""
+              fill
+              className="object-cover object-left"
+              sizes="36px"
+              priority
             />
-            <span className="relative text-sm font-black tracking-tighter font-mono text-foreground">
-              B
-            </span>
           </div>
           <span className="text-lg font-bold tracking-tight">
             <span className="gradient-text">Break</span>{" "}
