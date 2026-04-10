@@ -18,13 +18,13 @@ export default async function ToolRuntimePage({
 
   return (
     <div className="px-6 py-16">
-      <div className="mx-auto max-w-3xl glass-card rounded-2xl p-8">
+      <div className="mx-auto max-w-3xl glass-card p-8">
         <h1 className="text-2xl font-bold text-foreground mb-3">{tool.name} runtime beta</h1>
         <p className="text-foreground/55 mb-4">
           This tool is configured for browser runtime execution. The current beta intentionally limits
           network access and persists data to session-only browser storage.
         </p>
-        <div className="rounded-xl border border-card-border bg-white/5 p-4 mb-6">
+        <div className="rounded-none border border-card-border bg-white/5 p-4 mb-6">
           <p className="text-sm text-foreground/60">Runtime entrypoint</p>
           <p className="font-mono text-xs text-foreground/75 mt-1">
             {tool.runtime_entrypoint || "not configured"}
