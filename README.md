@@ -38,7 +38,8 @@ Key areas:
 
 - `src/app` - routes, layouts, pages, API route handlers
 - `src/components` - reusable UI components
-- `src/server` - server-only modules (database, auth, rate limiting)
+- `src/types` - shared domain TypeScript types
+- `src/server` - server-only modules (database, auth, rate limiting, validation)
 - `data` - local SQLite database files
 
 ## API Overview

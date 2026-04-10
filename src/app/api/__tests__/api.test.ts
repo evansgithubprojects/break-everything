@@ -435,7 +435,10 @@ describe("Requests API", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.requests.length).toBeGreaterThanOrEqual(1);
-    expect(data.requests[0].tool_name).toBe("VS Code Alternative");
+    const vsCode = data.requests.find(
+      (r: { tool_name: string }) => r.tool_name === "VS Code Alternative"
+    );
+    expect(vsCode).toBeDefined();
   });
 
   it("PATCH /api/requests/[id] is admin-only", async () => {

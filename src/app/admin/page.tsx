@@ -2,17 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import AdminToolForm from "@/components/forms/AdminToolForm";
-import type { Tool } from "@/types";
-
-interface ToolRequest {
-  id: number;
-  tool_name: string;
-  description: string;
-  submitted_by: string | null;
-  link: string | null;
-  status: string;
-  created_at: string;
-}
+import type { Tool, ToolRequest } from "@/types";
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);

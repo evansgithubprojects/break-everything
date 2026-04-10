@@ -25,13 +25,7 @@ export default function ToolCard({ tool }: { tool: Tool }) {
     <div className="glass-card rounded-2xl p-6 h-full flex flex-col group hover:border-accent-purple/20 transition-colors">
       <div className="flex items-start justify-between mb-4">
         <span className="text-3xl">{tool.icon}</span>
-        <div className="flex flex-col items-end gap-1.5">
-          {kindBadge(k)}
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-xs text-green-400 font-medium">Listed</span>
-          </div>
-        </div>
+        <div className="shrink-0">{kindBadge(k)}</div>
       </div>
 
       <Link href={`/tools/${tool.slug}`} className="block flex-1 min-h-0">

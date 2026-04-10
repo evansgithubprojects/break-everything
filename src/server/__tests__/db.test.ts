@@ -39,7 +39,7 @@ import {
   deleteToolRequest,
 } from "@/server/db";
 import type { Tool } from "@/types";
-import type { ToolRequest } from "@/server/db";
+import type { ToolRequest } from "@/types";
 
 beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR)) {

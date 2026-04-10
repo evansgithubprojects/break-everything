@@ -9,6 +9,7 @@ import {
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
+import type { ToolRequest } from "@/types";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -608,15 +609,7 @@ export async function getReviewedToolCount(): Promise<number> {
 
 // --- Tool Requests ---
 
-export interface ToolRequest {
-  id: number;
-  tool_name: string;
-  description: string;
-  submitted_by: string | null;
-  link: string | null;
-  status: string;
-  created_at: string;
-}
+export type { ToolRequest };
 
 export async function createToolRequest(req: {
   tool_name: string;
