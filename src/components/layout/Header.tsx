@@ -52,6 +52,12 @@ export default function Header() {
               </Link>
             );
           })}
+          <Link
+            href="/tools#request-a-tool"
+            className="pl-2 pr-2.5 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium border-l-2 border-transparent text-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors whitespace-nowrap"
+          >
+            Request
+          </Link>
           <a
             href="https://github.com/break-everything/break-everything"
             target="_blank"

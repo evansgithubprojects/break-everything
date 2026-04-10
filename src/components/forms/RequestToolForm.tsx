@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function RequestToolForm() {
+type RequestToolFormProps = {
+  /** Larger primary-style trigger (e.g. tools page callout). */
+  variant?: "default" | "prominent";
+};
+
+export default function RequestToolForm({ variant = "default" }: RequestToolFormProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -14,6 +19,18 @@ export default function RequestToolForm() {
     submitted_by: "",
     link: "",
   });
+
+  useEffect(() => {
+    function syncFromHash() {
+      if (typeof window === "undefined") return;
+      if (window.location.hash === "#request-a-tool") {
+        setOpen(true);
+      }
+    }
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -53,23 +70,34 @@ export default function RequestToolForm() {
     setOpen(false);
     setSubmitted(false);
     setError("");
+    if (typeof window !== "undefined" && window.location.hash === "#request-a-tool") {
+      const path = `${window.location.pathname}${window.location.search}`;
+      window.history.replaceState(null, "", path);
+    }
   }
 
   const inputClass =
     "w-full px-4 py-2.5 rounded-xl bg-white/5 border border-card-border text-foreground text-sm placeholder:text-foreground/30 focus:outline-none focus:border-accent-amber/50 focus:ring-1 focus:ring-accent-amber/30 transition-colors";
 
+  const triggerClass =
+    variant === "prominent"
+      ? "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)] transition-all hover:scale-[1.02] w-full sm:w-auto"
+      : "inline-flex items-center gap-2 px-5 py-2.5 font-medium text-sm glass-card text-foreground/70 hover:text-foreground gradient-border";
+
   if (!open) {
     return (
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-5 py-2.5 font-medium text-sm glass-card text-foreground/70 hover:text-foreground gradient-border"
+        className={triggerClass}
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 shrink-0"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           strokeWidth={2}
+          aria-hidden
         >
           <path
             strokeLinecap="round"
@@ -77,7 +105,7 @@ export default function RequestToolForm() {
             d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
           />
         </svg>
-        Request a Tool
+        Request a tool
       </button>
     );
   }

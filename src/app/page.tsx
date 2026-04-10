@@ -47,21 +47,29 @@ export default async function HomePage() {
             with install or release links only when a listing needs them.
           </p>
 
-          <div className="flex items-center justify-center gap-4 mb-16">
+          <div className="flex flex-col items-center gap-4 mb-16">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none">
+              <Link
+                href="/tools"
+                className="w-full sm:w-auto text-center px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background transition-all hover:scale-[1.02] border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)]"
+              >
+                Browse Tools
+              </Link>
+              <a
+                href="https://github.com/break-everything/break-everything"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto text-center px-6 py-3 rounded-none font-medium text-sm glass-card text-foreground/70 hover:text-foreground border-2 border-card-border"
+              >
+                View on GitHub
+              </a>
+            </div>
             <Link
-              href="/tools"
-              className="px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background transition-all hover:scale-[1.02] border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)]"
+              href="/tools#request-a-tool"
+              className="text-sm font-semibold text-accent-amber hover:text-accent-amber/85 underline-offset-4 hover:underline decoration-accent-amber/50"
             >
-              Browse Tools
+              Don&apos;t see what you need? Request a tool
             </Link>
-            <a
-              href="https://github.com/break-everything/break-everything"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 rounded-none font-medium text-sm glass-card text-foreground/70 hover:text-foreground border-2 border-card-border"
-            >
-              View on GitHub
-            </a>
           </div>
 
           {/* Trust Stats */}
@@ -144,12 +152,20 @@ export default async function HomePage() {
                   The most popular picks from the community
                 </p>
               </div>
-              <Link
-                href="/tools"
-                className="text-sm text-accent-amber hover:text-accent-amber/80 transition-colors font-medium"
-              >
-                View all &rarr;
-              </Link>
+              <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <Link
+                  href="/tools#request-a-tool"
+                  className="text-sm font-medium text-foreground/50 hover:text-accent-amber transition-colors"
+                >
+                  Request a tool
+                </Link>
+                <Link
+                  href="/tools"
+                  className="text-sm text-accent-amber hover:text-accent-amber/80 transition-colors font-medium"
+                >
+                  View all &rarr;
+                </Link>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featured.map((tool) => (

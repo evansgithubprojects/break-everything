@@ -43,6 +43,14 @@ export default function Footer() {
                   Browse Tools
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/tools#request-a-tool"
+                  className="text-sm text-foreground/50 hover:text-foreground transition-colors"
+                >
+                  Request a tool
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -31,17 +31,36 @@ export default function ToolsPage() {
     <div className="px-6 py-16">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              All Tools
-            </h1>
-            <p className="text-foreground/50">
-              Browse our collection of free, open-source tools for students.
-            </p>
-          </div>
-          <RequestToolForm />
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+            All Tools
+          </h1>
+          <p className="text-foreground/50">
+            Browse our collection of free, open-source tools for students.
+          </p>
         </div>
+
+        {/* Request a tool — anchor target for /tools#request-a-tool */}
+        <section
+          id="request-a-tool"
+          className="scroll-mt-28 mb-10 rounded-none border-2 border-accent-amber/40 bg-gradient-to-br from-accent-amber/[0.08] to-transparent p-5 sm:p-6"
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-mono font-semibold uppercase tracking-widest text-accent-lime/90 mb-2">
+                Community
+              </p>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                Missing a tool? Suggest one.
+              </h2>
+              <p className="text-sm text-foreground/55 mt-2 max-w-2xl">
+                Tell us about a free, open-source project we should list, or describe what you need.
+                We read every request.
+              </p>
+            </div>
+            <RequestToolForm variant="prominent" />
+          </div>
+        </section>
 
         {/* Category Filters */}
         <div className="flex items-center gap-2 mb-8 flex-wrap">
