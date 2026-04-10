@@ -1,5 +1,6 @@
 export * from "./analytics-ingest";
 export * from "./api-response";
+export * from "./parse-json-body";
 export * from "./auth";
 export * from "./db";
 export * from "./rate-limit";
