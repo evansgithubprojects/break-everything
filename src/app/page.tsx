@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ToolCard from "@/components/tools/ToolCard";
-import { getAllTools, getToolCount, getTotalDownloads } from "@/server/db";
+import { getAllTools, getReviewedToolCount, getToolCount } from "@/server/db";
 import type { Tool } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const tools = (await getAllTools()) as Tool[];
   const toolCount = await getToolCount();
-  const totalDownloads = await getTotalDownloads();
+  const reviewedToolCount = await getReviewedToolCount();
 
   const featured = tools.slice(0, 6);
 
@@ -31,7 +31,7 @@ export default async function HomePage() {
 
           <p className="text-lg md:text-xl text-foreground/50 max-w-2xl mx-auto mb-10 leading-relaxed">
             Free tools for broke college students. PDF editors, file converters,
-            and utilities — all open-source, safety-verified, and downloadable
+            and utilities — all open-source, reviewed, and downloadable
             as exe/app files.
           </p>
 
@@ -62,9 +62,9 @@ export default async function HomePage() {
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">
-                {totalDownloads.toLocaleString()}
+                {reviewedToolCount}
               </div>
-              <div className="text-xs text-foreground/40 mt-1">Downloads</div>
+              <div className="text-xs text-foreground/40 mt-1">Reviewed Tools</div>
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">

@@ -2,13 +2,13 @@
 
 Free, open-source software tool directory for students, with safety metadata and a lightweight admin workflow.
 
-Break Everything helps users discover downloadable tools, review trust signals (checksums and safety score), and request new tools to be added.
+Break Everything helps users discover downloadable tools, review trust signals (checksums, scan dates, and review status), and request new tools to be added.
 
 ## Features
 
 - Browse all tools at `/tools`
 - View per-tool detail pages at `/tools/[slug]`
-- Inspect safety metadata such as SHA-256 and safety score
+- Inspect safety metadata such as SHA-256 and scan history
 - Submit tool requests from the public UI
 - Manage tools and requests from `/admin` after authentication
 - Use built-in API routes for tools, auth, and requests

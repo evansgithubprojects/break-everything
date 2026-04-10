@@ -37,8 +37,12 @@ export default function ToolsPage() {
               All Tools
             </h1>
             <p className="text-foreground/50">
-              Browse our collection of free, open-source tools — verified safe and
-              ready to download.
+              Browse our collection of free, open-source tools with browser-first access
+              and download fallback only when needed.
+            </p>
+            <p className="text-xs text-foreground/40 mt-2">
+              We prioritize trusted web access first, then embedded experiences, then
+              browser runtime beta support.
             </p>
           </div>
           <RequestToolForm />

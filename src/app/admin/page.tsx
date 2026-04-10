@@ -230,7 +230,7 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-foreground/50 text-sm mt-1">
-              Manage tools, certificates, and downloads.
+              Manage tools, certificates, and trust metrics.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -393,6 +393,14 @@ export default function AdminPage() {
             </div>
           ) : (
             tools.map((tool) => (
+              (() => {
+                const staleDays = tool.last_reviewed_at
+                  ? Math.floor(
+                      (Date.now() - new Date(tool.last_reviewed_at).getTime()) / (1000 * 60 * 60 * 24)
+                    )
+                  : null;
+                const stale = staleDays == null || staleDays > 90;
+                return (
               <div
                 key={tool.id}
                 className="glass-card rounded-xl p-5 flex items-center justify-between"
@@ -413,6 +421,9 @@ export default function AdminPage() {
                       >
                         {tool.tool_kind === "web" ? "Web" : "Download"}
                       </span>
+                      <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider border border-card-border text-foreground/45">
+                        {tool.delivery_mode}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-foreground/40">/{tool.slug}</span>
@@ -420,11 +431,15 @@ export default function AdminPage() {
                         {tool.category}
                       </span>
                       <span className="text-xs text-foreground/40">
-                        {tool.downloads.toLocaleString()} downloads
+                        scan {tool.last_scan_date
+                          ? new Date(tool.last_scan_date).toLocaleDateString()
+                          : "pending"}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        {tool.safety_score}/100
+                      <span
+                        className={`text-xs ${stale ? "text-yellow-400" : "text-foreground/40"}`}
+                        title="Tool trust metadata should be re-reviewed every 90 days"
+                      >
+                        {stale ? "review stale" : "review fresh"}
                       </span>
                     </div>
                   </div>
@@ -446,6 +461,8 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
+                );
+              })()
             ))
           )}
         </div>

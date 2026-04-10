@@ -77,11 +77,6 @@ body {
   box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
 }
 
-.safety-verified {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
 @keyframes float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-20px) rotate(3deg); }

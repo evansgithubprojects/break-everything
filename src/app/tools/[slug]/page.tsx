@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import SafetyCertificate from "@/components/tools/SafetyCertificate";
 import ToolAccessLinks from "@/components/tools/ToolAccessLinks";
+import TrustPanel from "@/components/tools/TrustPanel";
 import { getToolBySlug } from "@/server/db";
 import type { Tool } from "@/types";
 
@@ -74,8 +74,7 @@ export default async function ToolDetailPage({
               </p>
             </div>
 
-            {/* Safety Certificate */}
-            <SafetyCertificate tool={tool} />
+            <TrustPanel tool={tool} />
           </div>
 
           {/* Sidebar */}
@@ -107,9 +106,15 @@ export default async function ToolDetailPage({
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground/50">Downloads</span>
+                  <span className="text-sm text-foreground/50">Last scanned</span>
                   <span className="text-sm text-foreground">
-                    {tool.downloads.toLocaleString()}
+                    {tool.last_scan_date
+                      ? new Date(tool.last_scan_date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "Pending"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

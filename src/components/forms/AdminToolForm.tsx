@@ -20,12 +20,23 @@ function buildInitialForm(tool?: Tool | null) {
       category: tool.category,
       icon: tool.icon,
       tool_kind: kind,
+      delivery_mode: tool.delivery_mode || "download",
       download_url: tool.download_url || "",
       web_url: tool.web_url || "",
+      embed_allowed: Boolean(tool.embed_allowed),
+      embed_url: tool.embed_url || "",
+      runtime_supported: Boolean(tool.runtime_supported),
+      runtime_entrypoint: tool.runtime_entrypoint || "",
+      sandbox_level: tool.sandbox_level || "strict",
+      trusted_domains: tool.trusted_domains || "",
+      vendor: tool.vendor || "",
+      privacy_summary: tool.privacy_summary || "",
+      data_handling: tool.data_handling || "medium",
+      review_notes: tool.review_notes || "",
+      last_reviewed_at: tool.last_reviewed_at || "",
       github_url: tool.github_url,
       platform: tool.platform,
       sha256_hash: tool.sha256_hash || "",
-      safety_score: tool.safety_score,
       last_scan_date: tool.last_scan_date || "",
     };
   }
@@ -37,12 +48,23 @@ function buildInitialForm(tool?: Tool | null) {
     category: "",
     icon: "🔧",
     tool_kind: "download" as ToolKind,
+    delivery_mode: "download",
     download_url: "",
     web_url: "",
+    embed_allowed: false,
+    embed_url: "",
+    runtime_supported: false,
+    runtime_entrypoint: "",
+    sandbox_level: "strict",
+    trusted_domains: "",
+    vendor: "",
+    privacy_summary: "",
+    data_handling: "medium",
+    review_notes: "",
+    last_reviewed_at: "",
     github_url: "",
     platform: "windows",
     sha256_hash: "",
-    safety_score: 100,
     last_scan_date: "",
   };
 }
@@ -57,9 +79,13 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
+    const checked = "checked" in e.target ? e.target.checked : false;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "safety_score" ? parseInt(value) || 0 : value,
+      [name]:
+        name === "embed_allowed" || name === "runtime_supported"
+          ? checked
+          : value,
     }));
   }
 
@@ -188,6 +214,20 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
           </select>
         </div>
         <div>
+          <label className={labelClass}>Delivery mode</label>
+          <select
+            name="delivery_mode"
+            value={form.delivery_mode}
+            onChange={handleChange}
+            className={inputClass}
+          >
+            <option value="redirect">A: Redirect to trusted web tool</option>
+            <option value="embedded">B: Embed in app</option>
+            <option value="browserRuntime">C: Browser runtime beta</option>
+            <option value="download">Download fallback</option>
+          </select>
+        </div>
+        <div>
           <label className={labelClass}>Category</label>
           <input
             type="text"
@@ -267,12 +307,140 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         </div>
       </div>
 
-      {/* Safety Certificate Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label className={labelClass}>Embed URL</label>
+          <input
+            type="url"
+            name="embed_url"
+            value={form.embed_url}
+            onChange={handleChange}
+            placeholder="https://... embeddable endpoint"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Trusted domains (comma-separated)</label>
+          <input
+            type="text"
+            name="trusted_domains"
+            value={form.trusted_domains}
+            onChange={handleChange}
+            placeholder="example.com,cdn.example.com"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Runtime entrypoint</label>
+          <input
+            type="text"
+            name="runtime_entrypoint"
+            value={form.runtime_entrypoint}
+            onChange={handleChange}
+            placeholder="/runtime/main.js"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Sandbox level</label>
+          <select
+            name="sandbox_level"
+            value={form.sandbox_level}
+            onChange={handleChange}
+            className={inputClass}
+          >
+            <option value="strict">Strict</option>
+            <option value="standard">Standard</option>
+            <option value="trusted">Trusted</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <label className="flex items-center gap-2 text-sm text-foreground/70">
+          <input
+            type="checkbox"
+            name="embed_allowed"
+            checked={form.embed_allowed}
+            onChange={handleChange}
+          />
+          Embed allowed
+        </label>
+        <label className="flex items-center gap-2 text-sm text-foreground/70">
+          <input
+            type="checkbox"
+            name="runtime_supported"
+            checked={form.runtime_supported}
+            onChange={handleChange}
+          />
+          Runtime supported
+        </label>
+        <div>
+          <label className={labelClass}>Data handling</label>
+          <select
+            name="data_handling"
+            value={form.data_handling}
+            onChange={handleChange}
+            className={inputClass}
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Last reviewed</label>
+          <input
+            type="date"
+            name="last_reviewed_at"
+            value={form.last_reviewed_at}
+            onChange={handleChange}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label className={labelClass}>Vendor</label>
+          <input
+            type="text"
+            name="vendor"
+            value={form.vendor}
+            onChange={handleChange}
+            placeholder="Provider or publisher name"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Privacy summary</label>
+          <input
+            type="text"
+            name="privacy_summary"
+            value={form.privacy_summary}
+            onChange={handleChange}
+            placeholder="Where user data is processed and retained"
+            className={inputClass}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className={labelClass}>Review notes</label>
+          <textarea
+            name="review_notes"
+            value={form.review_notes}
+            onChange={handleChange}
+            className={`${inputClass} h-24 resize-y`}
+            placeholder="Moderation checklist notes, trust rationale, and follow-up tasks"
+          />
+        </div>
+      </div>
+
+      {/* Verification metadata */}
       <div className="border-t border-card-border pt-5 mt-6">
         <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">
-          Safety Certificate
+          Verification Metadata
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className={labelClass}>SHA-256 Hash</label>
             <input
@@ -282,18 +450,6 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
               onChange={handleChange}
               placeholder="a1b2c3d4e5f6..."
               className={`${inputClass} font-mono text-xs`}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Safety Score (0-100)</label>
-            <input
-              type="number"
-              name="safety_score"
-              value={form.safety_score}
-              onChange={handleChange}
-              min={0}
-              max={100}
-              className={inputClass}
             />
           </div>
           <div>

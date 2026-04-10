@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Tool, ToolKind } from "@/types";
 import ToolAccessLinks from "./ToolAccessLinks";
+import { resolvePrimaryAction } from "./delivery";
 
 function kindBadge(k: ToolKind) {
   if (k === "web") {
@@ -20,6 +21,7 @@ function kindBadge(k: ToolKind) {
 export default function ToolCard({ tool }: { tool: Tool }) {
   const platformBadges = tool.platform.split(",").map((p) => p.trim());
   const k: ToolKind = tool.tool_kind === "web" ? "web" : "download";
+  const action = resolvePrimaryAction(tool);
 
   return (
     <div className="glass-card rounded-2xl p-6 h-full flex flex-col group hover:border-accent-purple/20 transition-colors">
@@ -27,6 +29,9 @@ export default function ToolCard({ tool }: { tool: Tool }) {
         <span className="text-3xl">{tool.icon}</span>
         <div className="flex flex-col items-end gap-1.5">
           {kindBadge(k)}
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-foreground/5 text-foreground/50 border border-card-border uppercase tracking-wider">
+            {action.type}
+          </span>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-green-500" />
             <span className="text-xs text-green-400 font-medium">Verified</span>
@@ -57,15 +62,8 @@ export default function ToolCard({ tool }: { tool: Tool }) {
         </span>
       </div>
 
-      <div
-        className="pt-3 border-t border-card-border"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ToolAccessLinks
-          tool={tool}
-          variant="card"
-          onLinkClick={(e) => e.stopPropagation()}
-        />
+      <div className="pt-3 border-t border-card-border">
+        <ToolAccessLinks tool={tool} variant="card" />
       </div>
     </div>
   );
