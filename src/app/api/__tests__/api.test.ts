@@ -54,6 +54,7 @@ import {
 } from "@/app/api/requests/[id]/route";
 import { POST as postEvent } from "@/app/api/events/route";
 import { GET as getAnalytics } from "@/app/api/analytics/route";
+import { ANALYTICS_INGEST_RATE_LIMIT } from "@/server/rate-limit";
 
 beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR)) {
@@ -574,6 +575,189 @@ describe("Events API", () => {
     const res = await postEvent(req);
     expect(res.status).toBe(400);
   });
+
+  it("POST /api/events rejects missing event or slug", async () => {
+    const noEvent = jsonRequest("http://localhost/api/events", "POST", {
+      slug: "pdf-forge",
+      action: "download",
+    });
+    expect((await postEvent(noEvent)).status).toBe(400);
+
+    const noSlug = jsonRequest("http://localhost/api/events", "POST", {
+      event: "tool_action_click",
+      action: "download",
+    });
+    expect((await postEvent(noSlug)).status).toBe(400);
+  });
+
+  it("POST /api/events accepts omitted action as empty string", async () => {
+    const req = jsonRequest("http://localhost/api/events", "POST", {
+      event: "tool_action_click",
+      slug: "pdf-forge",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+  });
+
+  it("POST /api/events rejects invalid JSON body", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.50",
+      },
+      body: "not-valid-json{",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects empty body", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.51",
+      },
+      body: "",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects whitespace-only body", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.52",
+      },
+      body: " \n\t ",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects JSON body when Content-Type is not application/json", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain",
+        "x-forwarded-for": "203.0.113.53",
+      },
+      body: JSON.stringify({
+        event: "tool_action_click",
+        slug: "pdf-forge",
+        action: "download",
+      }),
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects missing Content-Type with non-empty body", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "x-forwarded-for": "203.0.113.54",
+      },
+      body: JSON.stringify({
+        event: "tool_action_click",
+        slug: "pdf-forge",
+      }),
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects truncated JSON", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.55",
+      },
+      body: '{"event":"tool_action_click","slug":',
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events rejects JSON array root", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.56",
+      },
+      body: JSON.stringify([{ event: "tool_action_click", slug: "pdf-forge" }]),
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/events accepts application/json with charset", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "x-forwarded-for": "203.0.113.57",
+      },
+      body: JSON.stringify({
+        event: "tool_action_click",
+        slug: "pdf-forge",
+        action: "download",
+      }),
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /api/events rate-limits ingest per IP", async () => {
+    // `TRUST_FORWARDED_FOR` is set in `src/test-env.ts` (jest setupFiles) so this header is the client key.
+    const { maxRequests } = ANALYTICS_INGEST_RATE_LIMIT;
+    const ip = "203.0.113.99";
+    for (let i = 0; i < maxRequests; i++) {
+      const req = new NextRequest("http://localhost/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": ip,
+        },
+        body: JSON.stringify({
+          event: "tool_action_click",
+          slug: "pdf-forge",
+          action: "download",
+        }),
+      });
+      expect((await postEvent(req)).status).toBe(200);
+    }
+
+    const blocked = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": ip,
+      },
+      body: JSON.stringify({
+        event: "tool_action_click",
+        slug: "pdf-forge",
+        action: "embed",
+      }),
+    });
+    const blockedRes = await postEvent(blocked);
+    expect(blockedRes.status).toBe(429);
+  });
 });
 
 // --- Analytics API ---
@@ -646,5 +830,26 @@ describe("Analytics API", () => {
     );
     expect(embedRow).toBeDefined();
     expect(embedRow!.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it("GET /api/analytics clamps days to default when below 1 or non-numeric", async () => {
+    await loginAsAdmin();
+
+    const zeroDays = await getAnalytics(jsonRequest("http://localhost/api/analytics?days=0", "GET"));
+    expect(zeroDays.status).toBe(200);
+    expect((await zeroDays.json()).days).toBe(7);
+
+    const badDays = await getAnalytics(
+      jsonRequest("http://localhost/api/analytics?days=not-a-number", "GET")
+    );
+    expect(badDays.status).toBe(200);
+    expect((await badDays.json()).days).toBe(7);
+  });
+
+  it("GET /api/analytics caps days at 90", async () => {
+    await loginAsAdmin();
+    const res = await getAnalytics(jsonRequest("http://localhost/api/analytics?days=500", "GET"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).days).toBe(90);
   });
 });

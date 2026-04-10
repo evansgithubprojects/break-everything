@@ -50,7 +50,7 @@ function getClientIp(request: NextRequest): string {
   return "unknown";
 }
 
-interface RateLimitConfig {
+export interface RateLimitConfig {
   /** Unique name for this limiter's bucket */
   name: string;
   /** Max requests allowed in the window */
@@ -58,6 +58,16 @@ interface RateLimitConfig {
   /** Window duration in seconds */
   windowSeconds: number;
 }
+
+/**
+ * Public ingest limit for `POST /api/events` — single source of truth for product + tests.
+ * Change here and integration tests that assert 429 should use `maxRequests` from this object.
+ */
+export const ANALYTICS_INGEST_RATE_LIMIT: RateLimitConfig = {
+  name: "analytics-ingest",
+  maxRequests: 120,
+  windowSeconds: 60,
+};
 
 /**
  * Check rate limit for a request. Returns null if allowed,
@@ -118,7 +128,6 @@ export const rateLimiters = {
   adminWrite: (req: NextRequest) =>
     checkRateLimit(req, { name: "admin-write", maxRequests: 30, windowSeconds: 60 }),
 
-  /** Analytics event ingestion: 120 per minute per IP */
-  analyticsIngest: (req: NextRequest) =>
-    checkRateLimit(req, { name: "analytics-ingest", maxRequests: 120, windowSeconds: 60 }),
+  /** Analytics event ingestion — see `ANALYTICS_INGEST_RATE_LIMIT` */
+  analyticsIngest: (req: NextRequest) => checkRateLimit(req, ANALYTICS_INGEST_RATE_LIMIT),
 } as const;

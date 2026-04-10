@@ -61,4 +61,19 @@ test.describe("admin", () => {
       timeout: 25_000,
     });
   });
+
+  test("admin analytics tab loads summary from API", async ({ page }) => {
+    await page.goto("/admin");
+    await page.getByPlaceholder("Password").fill("e2e-admin-password");
+    await page.getByRole("button", { name: "Login" }).click();
+    await expect(page.getByRole("heading", { name: "Admin Dashboard" })).toBeVisible({
+      timeout: 25_000,
+    });
+
+    await page.getByRole("button", { name: "Analytics" }).click();
+    await expect(page.getByRole("heading", { name: "Analytics", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Tool")).toBeVisible();
+    await expect(page.getByText("UTC midnight boundaries")).toBeVisible();
+    await expect(page.getByText("Events in range")).toBeVisible({ timeout: 25_000 });
+  });
 });

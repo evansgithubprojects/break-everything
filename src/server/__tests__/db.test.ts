@@ -37,6 +37,8 @@ import {
   getPendingToolRequests,
   updateToolRequestStatus,
   deleteToolRequest,
+  recordAnalyticsEvent,
+  getAnalyticsSummary,
 } from "@/server/db";
 import type { Tool } from "@/types";
 import type { ToolRequest } from "@/types";
@@ -268,5 +270,58 @@ describe("Tool Requests CRUD", () => {
     for (const r of reqs) {
       await deleteToolRequest(r.id);
     }
+  });
+});
+
+// --- Analytics ---
+
+describe("Analytics DB", () => {
+  function sinceUtcMidnightDaysAgo(days: number): Date {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - days);
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  }
+
+  it("recordAnalyticsEvent rows roll up in getAnalyticsSummary", async () => {
+    await recordAnalyticsEvent({
+      event: "tool_action_click",
+      slug: "pdf-forge",
+      action: "web",
+    });
+    await recordAnalyticsEvent({
+      event: "tool_action_click",
+      slug: "pdf-forge",
+      action: "download",
+    });
+    await recordAnalyticsEvent({
+      event: "tool_action_click",
+      slug: "convertx",
+      action: "redirect",
+    });
+
+    const since = sinceUtcMidnightDaysAgo(1);
+    const summary = await getAnalyticsSummary(since);
+
+    expect(summary.totals.all).toBeGreaterThanOrEqual(3);
+    expect(summary.toolActionClicks).toBeGreaterThanOrEqual(3);
+    expect(summary.uniqueSlugs).toBeGreaterThanOrEqual(2);
+
+    const webRow = summary.byAction.find((a) => a.action === "web");
+    const dlRow = summary.byAction.find((a) => a.action === "download");
+    expect(webRow?.count).toBeGreaterThanOrEqual(1);
+    expect(dlRow?.count).toBeGreaterThanOrEqual(1);
+
+    const pdfTop = summary.topTools.find((t) => t.slug === "pdf-forge");
+    expect(pdfTop?.count).toBeGreaterThanOrEqual(2);
+  });
+
+  it("getAnalyticsSummary slug filter scopes totals and top tools", async () => {
+    const since = sinceUtcMidnightDaysAgo(90);
+    const filtered = await getAnalyticsSummary(since, { slug: "pdf-forge" });
+
+    expect(filtered.totals.all).toBeGreaterThanOrEqual(2);
+    expect(filtered.toolActionClicks).toBe(filtered.totals.all);
+    expect(filtered.topTools.every((t) => t.slug === "pdf-forge")).toBe(true);
   });
 });

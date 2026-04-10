@@ -6,6 +6,7 @@ import {
 import { rateLimiters } from "@/server/rate-limit";
 import { recordAnalyticsEvent } from "@/server/db";
 import { jsonServerError } from "@/server/api-response";
+import { InvalidJsonBodyError, parseJsonRequestBody } from "@/server/parse-json-body";
 import { isValidToolSlug } from "@/server/validation";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,13 @@ export async function POST(request: NextRequest) {
   if (blocked) return blocked;
 
   try {
-    const body = await request.json();
+    const raw = await request.text();
+    const parsed = parseJsonRequestBody(raw, request.headers.get("content-type"));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+    const body = parsed as Record<string, unknown>;
+
     const event = String(body.event ?? "").trim();
     const slug = String(body.slug ?? "").trim();
 
@@ -43,8 +50,8 @@ export async function POST(request: NextRequest) {
 
     await recordAnalyticsEvent({ event, slug, action });
     return NextResponse.json({ success: true });
-  } catch (err) {
-    if (err instanceof SyntaxError) {
+  } catch (err: unknown) {
+    if (err instanceof InvalidJsonBodyError) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
     return jsonServerError(err);
