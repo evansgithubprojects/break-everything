@@ -85,9 +85,9 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Safety Verified</h3>
+            <h3 className="font-semibold text-foreground mb-2">Curated listings</h3>
             <p className="text-sm text-foreground/50">
-              Every tool comes with SHA-256 checksums, safety scans, and a verification certificate you can inspect.
+              Each entry is reviewed for basic metadata and linked to its public source so you can decide what to run.
             </p>
           </div>
 

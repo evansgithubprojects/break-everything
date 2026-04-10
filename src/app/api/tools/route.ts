@@ -168,8 +168,6 @@ export async function POST(request: NextRequest) {
       last_reviewed_at: body.last_reviewed_at || null,
       github_url: body.github_url,
       platform: body.platform || "windows",
-      sha256_hash: body.sha256_hash || null,
-      last_scan_date: body.last_scan_date || null,
     });
     return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) }, { status: 201 });
   } catch (err: unknown) {

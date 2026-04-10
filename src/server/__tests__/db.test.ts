@@ -132,8 +132,6 @@ describe("Tools CRUD", () => {
       web_url: "",
       github_url: "https://github.com/test/test",
       platform: "windows",
-      sha256_hash: "abc123",
-      last_scan_date: "2026-04-01",
     });
 
     const tool = (await getToolBySlug("test-tool")) as Tool;
@@ -156,8 +154,6 @@ describe("Tools CRUD", () => {
         web_url: "",
         github_url: "https://github.com/test",
         platform: "windows",
-        sha256_hash: null,
-        last_scan_date: null,
       })
     ).rejects.toThrow();
   });
@@ -174,8 +170,6 @@ describe("Tools CRUD", () => {
       web_url: "",
       github_url: "https://github.com/test/test",
       platform: "windows,mac",
-      sha256_hash: "def456",
-      last_scan_date: "2026-04-05",
     });
 
     const tool = (await getToolBySlug("test-tool")) as Tool;

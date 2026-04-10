@@ -36,8 +36,6 @@ function buildInitialForm(tool?: Tool | null) {
       last_reviewed_at: tool.last_reviewed_at || "",
       github_url: tool.github_url,
       platform: tool.platform,
-      sha256_hash: tool.sha256_hash || "",
-      last_scan_date: tool.last_scan_date || "",
     };
   }
   return {
@@ -64,8 +62,6 @@ function buildInitialForm(tool?: Tool | null) {
     last_reviewed_at: "",
     github_url: "",
     platform: "windows",
-    sha256_hash: "",
-    last_scan_date: "",
   };
 }
 
@@ -432,36 +428,6 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
             className={`${inputClass} h-24 resize-y`}
             placeholder="Moderation checklist notes, trust rationale, and follow-up tasks"
           />
-        </div>
-      </div>
-
-      {/* Verification metadata */}
-      <div className="border-t border-card-border pt-5 mt-6">
-        <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">
-          Verification Metadata
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className={labelClass}>SHA-256 Hash</label>
-            <input
-              type="text"
-              name="sha256_hash"
-              value={form.sha256_hash}
-              onChange={handleChange}
-              placeholder="a1b2c3d4e5f6..."
-              className={`${inputClass} font-mono text-xs`}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Last Scan Date</label>
-            <input
-              type="date"
-              name="last_scan_date"
-              value={form.last_scan_date}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </div>
         </div>
       </div>
 

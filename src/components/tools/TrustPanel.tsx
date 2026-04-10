@@ -8,10 +8,10 @@ export default function TrustPanel({ tool }: { tool: Tool }) {
   return (
     <div className="glass-card rounded-2xl p-6 space-y-3">
       <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">
-        Why this is safer
+        Listing details
       </h3>
       <p className="text-sm text-foreground/55">
-        Browser-first access reduces executable downloads and makes trust signals visible before use.
+        We show how each tool is delivered (web, embed, runtime, or download) and link to the public repository.
       </p>
       <div className="text-sm text-foreground/60 space-y-2">
         <p>

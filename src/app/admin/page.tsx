@@ -230,7 +230,7 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-foreground/50 text-sm mt-1">
-              Manage tools, certificates, and trust metrics.
+              Manage tools and incoming requests.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -431,9 +431,10 @@ export default function AdminPage() {
                         {tool.category}
                       </span>
                       <span className="text-xs text-foreground/40">
-                        scan {tool.last_scan_date
-                          ? new Date(tool.last_scan_date).toLocaleDateString()
-                          : "pending"}
+                        reviewed{" "}
+                        {tool.last_reviewed_at
+                          ? new Date(tool.last_reviewed_at).toLocaleDateString()
+                          : "—"}
                       </span>
                       <span
                         className={`text-xs ${stale ? "text-yellow-400" : "text-foreground/40"}`}

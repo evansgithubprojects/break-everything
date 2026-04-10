@@ -34,7 +34,7 @@ export default function ToolCard({ tool }: { tool: Tool }) {
           </span>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-xs text-green-400 font-medium">Verified</span>
+            <span className="text-xs text-green-400 font-medium">Listed</span>
           </div>
         </div>
       </div>

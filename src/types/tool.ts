@@ -29,8 +29,6 @@ export interface Tool {
   last_reviewed_at: string | null;
   github_url: string;
   platform: string;
-  sha256_hash: string | null;
-  last_scan_date: string | null;
   downloads: number;
   created_at: string;
   updated_at: string;

@@ -191,6 +191,30 @@ async function migrateToolsColumns(client: Client) {
   }
 }
 
+/** Legacy columns removed from the product; drop on existing databases (SQLite 3.35+). */
+async function migrateRemoveLegacyVerificationColumns(client: Client) {
+  let info = await client.execute("PRAGMA table_info(tools)");
+  let colNames = new Set(
+    info.rows.map((row) => {
+      const name = (row as { name?: string }).name;
+      return name != null ? String(name) : "";
+    })
+  );
+  if (colNames.has("sha256_hash")) {
+    await client.execute("ALTER TABLE tools DROP COLUMN sha256_hash");
+  }
+  info = await client.execute("PRAGMA table_info(tools)");
+  colNames = new Set(
+    info.rows.map((row) => {
+      const name = (row as { name?: string }).name;
+      return name != null ? String(name) : "";
+    })
+  );
+  if (colNames.has("last_scan_date")) {
+    await client.execute("ALTER TABLE tools DROP COLUMN last_scan_date");
+  }
+}
+
 async function initSchema(client: Client) {
   const schemaStatements: InStatement[] = [
     {
@@ -219,8 +243,6 @@ async function initSchema(client: Client) {
         last_reviewed_at TEXT,
         github_url TEXT NOT NULL,
         platform TEXT NOT NULL DEFAULT 'windows',
-        sha256_hash TEXT,
-        last_scan_date TEXT,
         downloads INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now'))
@@ -247,6 +269,7 @@ async function initSchema(client: Client) {
 
   await client.batch(schemaStatements, "write");
   await migrateToolsColumns(client);
+  await migrateRemoveLegacyVerificationColumns(client);
 
   if (!ADMIN_PASSWORD) {
     throw new Error("Missing ADMIN_PASSWORD environment variable.");
@@ -303,12 +326,10 @@ async function seedTools(client: Client) {
       vendor: "Example OSS",
       privacy_summary: "Runs as a local desktop app downloaded from GitHub releases.",
       data_handling: "medium",
-      review_notes: "Seed data. Verify checksums before publishing.",
+      review_notes: "Seed data. Replace with real moderation notes before publishing.",
       last_reviewed_at: "2026-03-28",
       github_url: "https://github.com/example/pdf-forge",
       platform: "windows,mac",
-      sha256_hash: "a1b2c3d4e5f6789012345678abcdef0123456789abcdef0123456789abcdef01",
-      last_scan_date: "2026-03-28",
       downloads: 12450,
     },
     {
@@ -335,8 +356,6 @@ async function seedTools(client: Client) {
       last_reviewed_at: "2026-04-01",
       github_url: "https://github.com/example/convertx",
       platform: "windows",
-      sha256_hash: "b2c3d4e5f6789012345678abcdef0123456789abcdef0123456789abcdef0123",
-      last_scan_date: "2026-04-01",
       downloads: 8320,
     },
     {
@@ -359,12 +378,10 @@ async function seedTools(client: Client) {
       vendor: "Example OSS",
       privacy_summary: "Desktop utility with local clipboard history storage.",
       data_handling: "medium",
-      review_notes: "Seed data. Confirm signed artifacts in real deployments.",
+      review_notes: "Seed data. Update before production listing.",
       last_reviewed_at: "2026-04-03",
       github_url: "https://github.com/example/clipvault",
       platform: "windows,mac",
-      sha256_hash: "c3d4e5f6789012345678abcdef0123456789abcdef0123456789abcdef012345",
-      last_scan_date: "2026-04-03",
       downloads: 5640,
     },
   ];
@@ -373,9 +390,8 @@ async function seedTools(client: Client) {
     sql: `INSERT OR IGNORE INTO tools (
       name, slug, description, short_description, category, icon, tool_kind, delivery_mode, download_url, web_url,
       embed_allowed, embed_url, runtime_supported, runtime_entrypoint, sandbox_level, trusted_domains, vendor,
-      privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform, sha256_hash,
-      last_scan_date, downloads
-    ) VALUES (?, ?, ?, ?, ?, ?, 'download', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform, downloads
+    ) VALUES (?, ?, ?, ?, ?, ?, 'download', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       tool.name,
       tool.slug,
@@ -399,8 +415,6 @@ async function seedTools(client: Client) {
       tool.last_reviewed_at,
       tool.github_url,
       tool.platform,
-      tool.sha256_hash,
-      tool.last_scan_date,
       tool.downloads,
     ],
   }));
@@ -444,8 +458,6 @@ interface ToolWriteInput {
   last_reviewed_at: string | null;
   github_url: string;
   platform: string;
-  sha256_hash: string | null;
-  last_scan_date: string | null;
 }
 
 function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
@@ -474,9 +486,8 @@ export async function createTool(tool: ToolWriteInput) {
     `INSERT INTO tools (
       name, slug, description, short_description, category, icon, tool_kind, delivery_mode, download_url, web_url,
       embed_allowed, embed_url, runtime_supported, runtime_entrypoint, sandbox_level, trusted_domains, vendor,
-      privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform, sha256_hash,
-      last_scan_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       t.name,
       t.slug,
@@ -501,8 +512,6 @@ export async function createTool(tool: ToolWriteInput) {
       t.last_reviewed_at,
       t.github_url,
       t.platform,
-      t.sha256_hash,
-      t.last_scan_date,
     ] as InValue[]
   );
 }
@@ -533,8 +542,6 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       last_reviewed_at = ?,
       github_url = ?,
       platform = ?,
-      sha256_hash = ?,
-      last_scan_date = ?,
       updated_at = datetime('now')
     WHERE slug = ?`,
     [
@@ -560,8 +567,6 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       t.last_reviewed_at,
       t.github_url,
       t.platform,
-      t.sha256_hash,
-      t.last_scan_date,
       slug,
     ] as InValue[]
   );

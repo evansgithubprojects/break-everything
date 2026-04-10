@@ -49,11 +49,11 @@ If your PR changes behavior visible to users or contributors, update at least on
 
 If details are uncertain, leave a clear `TODO` note instead of guessing.
 
-## Security and Safety Notes
+## Security Notes
 
 - Do not commit secrets or credentials.
 - Be careful with authentication, cookie handling, and rate-limit logic.
-- If you touch download or safety metadata, verify it is accurate and current.
+- If you touch download URLs or listing metadata, verify it is accurate and current.
 
 ## Tests
 

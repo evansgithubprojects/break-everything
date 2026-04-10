@@ -11,7 +11,7 @@ export default function Footer() {
               <span className="text-foreground/80">Everything</span>
             </Link>
             <p className="mt-3 text-sm text-foreground/50 max-w-xs">
-              Free, open-source tools for students who&apos;d rather build than pay. Every tool is verified safe and transparent.
+              Free, open-source tools for students who&apos;d rather build than pay. Source links on every listing.
             </p>
           </div>
 
@@ -35,20 +35,20 @@ export default function Footer() {
 
           <div>
             <h4 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-3">
-              Trust & Safety
+              What we list
             </h4>
             <ul className="space-y-2">
               <li className="text-sm text-foreground/50 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                All tools are open-source
+                Open-source projects with a public repo link
               </li>
               <li className="text-sm text-foreground/50 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                SHA-256 verified builds
+                Clear delivery mode (web, embed, download, and more)
               </li>
               <li className="text-sm text-foreground/50 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                Safety scanned & certified
+                Review dates you can see on each tool page
               </li>
             </ul>
           </div>

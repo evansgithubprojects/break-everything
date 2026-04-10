@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Break Everything — Free Tools for Students",
   description:
-    "Free, open-source, verified-safe tools for broke college students. PDF editors, file converters, and more — downloadable as exe/app files.",
+    "Free, open-source tools for broke college students. PDF editors, file converters, and more — with source links and listing details.",
 };
 
 export default function RootLayout({

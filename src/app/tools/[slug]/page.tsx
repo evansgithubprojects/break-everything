@@ -49,7 +49,7 @@ export default async function ToolDetailPage({
               </h1>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                Verified Safe
+                Open source
               </span>
             </div>
             <p className="text-foreground/50 mt-2">{tool.short_description}</p>
@@ -106,15 +106,15 @@ export default async function ToolDetailPage({
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground/50">Last scanned</span>
+                  <span className="text-sm text-foreground/50">Last reviewed</span>
                   <span className="text-sm text-foreground">
-                    {tool.last_scan_date
-                      ? new Date(tool.last_scan_date).toLocaleDateString("en-US", {
+                    {tool.last_reviewed_at
+                      ? new Date(tool.last_reviewed_at).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         })
-                      : "Pending"}
+                      : "Not set"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
