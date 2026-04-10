@@ -31,6 +31,7 @@ import {
   getCategories,
   getToolCount,
   getReviewedToolCount,
+  getSourceLinkedToolStats,
   getTotalDownloads,
   createToolRequest,
   getAllToolRequests,
@@ -119,6 +120,12 @@ describe("Tools CRUD", () => {
 
   it("getReviewedToolCount returns count of tools with review dates", async () => {
     expect(await getReviewedToolCount()).toBe(3);
+  });
+
+  it("getSourceLinkedToolStats counts tools with non-empty github_url", async () => {
+    const s = await getSourceLinkedToolStats();
+    expect(s.total).toBe(3);
+    expect(s.linked).toBe(3);
   });
 
   it("createTool adds a new tool", async () => {

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import ToolCard from "@/components/tools/ToolCard";
-import { getAllTools, getReviewedToolCount, getToolCount } from "@/server/db";
+import {
+  getAllTools,
+  getReviewedToolCount,
+  getSourceLinkedToolStats,
+  getToolCount,
+} from "@/server/db";
 import type { Tool } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +14,10 @@ export default async function HomePage() {
   const tools = (await getAllTools()) as Tool[];
   const toolCount = await getToolCount();
   const reviewedToolCount = await getReviewedToolCount();
+  const { linked: sourceLinkedCount, total: sourceTotal } =
+    await getSourceLinkedToolStats();
+  const sourceLinkPct =
+    sourceTotal === 0 ? 0 : Math.round((sourceLinkedCount / sourceTotal) * 100);
 
   const featured = tools.slice(0, 6);
 
@@ -71,9 +80,11 @@ export default async function HomePage() {
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">
-                100%
+                {sourceTotal === 0 ? "—" : `${sourceLinkPct}%`}
               </div>
-              <div className="text-xs text-foreground/40 mt-1">Open Source</div>
+              <div className="text-xs text-foreground/40 mt-1">
+                Listings with repo link
+              </div>
             </div>
           </div>
         </div>

@@ -622,6 +622,22 @@ export async function getReviewedToolCount(): Promise<number> {
   return Number(row?.count ?? 0);
 }
 
+/** Tools with a non-empty public repo URL (trust signal for “every listing links to source”). */
+export async function getSourceLinkedToolStats(): Promise<{
+  linked: number;
+  total: number;
+}> {
+  const row = await queryOne<{ total: number | string; linked: number | string }>(`
+    SELECT
+      (SELECT COUNT(*) FROM tools) AS total,
+      (SELECT COUNT(*) FROM tools WHERE TRIM(COALESCE(github_url, '')) != '') AS linked
+  `);
+  return {
+    total: Number(row?.total ?? 0),
+    linked: Number(row?.linked ?? 0),
+  };
+}
+
 // --- Tool Requests ---
 
 export type { ToolRequest };
