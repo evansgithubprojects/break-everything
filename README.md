@@ -2,7 +2,7 @@
 
 Free, open-source software tool directory for students, with listing metadata and a lightweight admin workflow.
 
-Break Everything helps users discover downloadable tools, see listing details (including review dates), and request new tools to be added.
+Break Everything helps users discover free tools (web-first listings with optional install or release links), see listing details (including review dates), and request new tools to be added.
 
 ## Features
 

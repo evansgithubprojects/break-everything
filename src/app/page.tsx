@@ -34,8 +34,8 @@ export default async function HomePage() {
 
           <p className="text-lg md:text-xl text-foreground/50 max-w-2xl mx-auto mb-10 leading-relaxed">
             Free tools for broke college students. PDF editors, file converters,
-            and utilities — all open-source, reviewed, and downloadable
-            as exe/app files.
+            and utilities — open-source, reviewed, and aimed at the browser first,
+            with install or release links only when a listing needs them.
           </p>
 
           <div className="flex items-center justify-center gap-4 mb-16">

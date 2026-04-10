@@ -205,7 +205,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
             onChange={handleChange}
             className={inputClass}
           >
-            <option value="download">Download (native / installer)</option>
+            <option value="download">Release / install link (non-web default)</option>
             <option value="web">Web app (runs in browser)</option>
           </select>
         </div>
