@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import ToolCard from "@/components/tools/ToolCard";
 import {
@@ -24,9 +25,9 @@ export default async function HomePage() {
   return (
     <div className="relative">
       {/* Hero Section */}
-      <section className="relative px-6 pt-20 pb-24 md:pt-32 md:pb-36">
+      <section className="relative px-6 pt-12 pb-16 md:pt-16 md:pb-24">
         <div className="mx-auto max-w-6xl text-center">
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-none bg-accent-amber/10 border-2 border-accent-steel/30 mb-8">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-none bg-accent-amber/10 border-2 border-accent-steel/30 mb-6 md:mb-8">
             <span
               className="w-2 h-2 bg-accent-lime shrink-0 rotate-45 border border-accent-amber/40"
               aria-hidden
@@ -36,12 +37,19 @@ export default async function HomePage() {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-            <span className="gradient-text">Break</span>{" "}
-            <span className="text-foreground">Everything</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-foreground/50 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <div className="mx-auto max-w-4xl mb-10 border border-card-border/50 bg-card-bg/30 overflow-hidden rounded-none">
+            <Image
+              src="/og-hero.png"
+              alt="Break Everything — free tools for broke college students: PDF helpers, file converters, and everyday utilities. We try each pick, explain what it does, and point you to the people behind it."
+              width={1024}
+              height={576}
+              className="w-full h-auto block"
+              priority
+              sizes="(max-width: 896px) 100vw, 896px"
+            />
+          </div>
+          <h1 className="sr-only">Break Everything</h1>
+          <p className="sr-only">
             Free tools for broke college students — PDF helpers, file converters, and everyday utilities.
             We try each pick, explain what it does, and point you to the people behind it.
           </p>
