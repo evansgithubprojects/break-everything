@@ -1,8 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import type { Tool } from "@/types";
 import { trackToolActionClick } from "@/analytics";
 import { resolvePrimaryAction } from "./delivery";
+
+/** Keeps card / parent handlers from seeing the gesture (important on mobile WebKit). */
+function isolateActionInteraction(e: { stopPropagation: () => void }) {
+  e.stopPropagation();
+}
 
 const downloadIcon = (
   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -67,41 +73,65 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
         target="_blank"
         rel="noopener noreferrer"
         className={githubClass}
-        onClick={(e) => e.stopPropagation()}
+        onClick={isolateActionInteraction}
+        onPointerDownCapture={isolateActionInteraction}
       >
         {githubIcon}
-        {isHero ? "View source" : "Source"}
+        {isHero ? "Project page" : "Project"}
       </a>
     );
   }
 
+  const primaryIsInternal = primaryHref.startsWith("/");
+  const primaryContent = (
+    <>
+      {primaryIcon}
+      {primaryLabel}
+    </>
+  );
+
   return (
     <div className={`flex flex-wrap items-center gap-2 ${isHero ? "gap-3" : ""}`}>
-      <a
-        href={primaryHref}
-        target={primaryHref.startsWith("/") ? undefined : "_blank"}
-        rel={primaryHref.startsWith("/") ? undefined : "noopener noreferrer"}
-        className={primaryClass}
-        onClick={(e) => {
-          e.stopPropagation();
-          void track(primaryAction.type);
-        }}
-      >
-        {primaryIcon}
-        {primaryLabel}
-      </a>
+      {primaryIsInternal ? (
+        <Link
+          href={primaryHref}
+          className={primaryClass}
+          onClick={(e) => {
+            isolateActionInteraction(e);
+            void track(primaryAction.type);
+          }}
+          onPointerDownCapture={isolateActionInteraction}
+        >
+          {primaryContent}
+        </Link>
+      ) : (
+        <a
+          href={primaryHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={primaryClass}
+          onClick={(e) => {
+            isolateActionInteraction(e);
+            void track(primaryAction.type);
+          }}
+          onPointerDownCapture={isolateActionInteraction}
+        >
+          {primaryContent}
+        </a>
+      )}
       <a
         href={tool.github_url}
         target="_blank"
         rel="noopener noreferrer"
         className={githubClass}
         onClick={(e) => {
-          e.stopPropagation();
+          isolateActionInteraction(e);
           void track("source");
         }}
+        onPointerDownCapture={isolateActionInteraction}
       >
         {githubIcon}
-        {isHero ? "View source" : "Source"}
+        {isHero ? "Project page" : "Project"}
       </a>
     </div>
   );

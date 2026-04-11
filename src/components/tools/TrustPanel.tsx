@@ -8,10 +8,10 @@ export default function TrustPanel({ tool }: { tool: Tool }) {
   return (
     <div className="glass-card p-6 space-y-3">
       <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">
-        Listing details
+        Transparency
       </h3>
       <p className="text-sm text-foreground/55">
-        Each listing links to the public repository and includes notes from our review.
+        We link to where the tool comes from and share what we checked during review.
       </p>
       <div className="text-sm text-foreground/60 space-y-2">
         <p>

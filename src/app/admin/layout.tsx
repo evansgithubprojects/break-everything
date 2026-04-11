@@ -3,11 +3,11 @@ import { SITE_NAME } from "@/lib/site-metadata";
 
 export const metadata: Metadata = {
   title: "Admin",
-  description: `Manage listings and requests — ${SITE_NAME}.`,
+  description: `Manage tools and requests — ${SITE_NAME}.`,
   robots: { index: false, follow: false },
   openGraph: {
     title: `Admin | ${SITE_NAME}`,
-    description: `Manage listings and requests — ${SITE_NAME}.`,
+    description: `Manage tools and requests — ${SITE_NAME}.`,
     url: "/admin",
     siteName: SITE_NAME,
     type: "website",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: `Admin | ${SITE_NAME}`,
-    description: `Manage listings and requests — ${SITE_NAME}.`,
+    description: `Manage tools and requests — ${SITE_NAME}.`,
   },
 };
 

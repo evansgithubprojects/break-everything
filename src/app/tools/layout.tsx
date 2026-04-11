@@ -9,7 +9,7 @@ const title = "Browse tools";
 
 export const metadata: Metadata = {
   title,
-  description: `Explore curated open-source tools for students. ${DEFAULT_DESCRIPTION}`,
+  description: `Browse free tools picked for students. ${DEFAULT_DESCRIPTION}`,
   alternates: {
     canonical: "/tools",
   },
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     url: "/tools",
     siteName: SITE_NAME,
     title: `${title} | ${SITE_NAME}`,
-    description: `Explore curated open-source tools for students. ${DEFAULT_DESCRIPTION}`,
+    description: `Browse free tools picked for students. ${DEFAULT_DESCRIPTION}`,
     images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | ${SITE_NAME}`,
-    description: `Explore curated open-source tools for students. ${DEFAULT_DESCRIPTION}`,
+    description: `Browse free tools picked for students. ${DEFAULT_DESCRIPTION}`,
     images: [
       {
         url: DEFAULT_OG_IMAGE.url,

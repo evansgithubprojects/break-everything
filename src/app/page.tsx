@@ -32,7 +32,7 @@ export default async function HomePage() {
               aria-hidden
             />
             <span className="text-xs font-semibold font-mono uppercase tracking-widest text-accent-lime/90">
-              Free · Open source
+              Free · Student-built picks
             </span>
           </div>
 
@@ -42,9 +42,9 @@ export default async function HomePage() {
           </h1>
 
           <p className="text-lg md:text-xl text-foreground/50 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Free tools for broke college students. PDF editors, file converters,
-            and utilities — open-source, reviewed, and aimed at the browser first,
-            with install or release links only when a listing needs them.
+            Free tools for broke college students — PDF helpers, converters, and everyday utilities.
+            We try each pick, explain what it does, and point you to the people behind it. Prefer the web
+            when we can; download links only when that makes sense.
           </p>
 
           <div className="flex flex-col items-center gap-4 mb-16">
@@ -61,7 +61,7 @@ export default async function HomePage() {
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto text-center px-6 py-3 rounded-none font-medium text-sm glass-card text-foreground/70 hover:text-foreground border-2 border-card-border"
               >
-                View on GitHub
+                About this site
               </a>
             </div>
             <Link
@@ -91,7 +91,7 @@ export default async function HomePage() {
                 {sourceTotal === 0 ? "—" : `${sourceLinkPct}%`}
               </div>
               <div className="text-xs text-foreground/40 mt-1">
-                Listings with repo link
+                With a project link
               </div>
             </div>
           </div>
@@ -107,9 +107,9 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Curated listings</h3>
+            <h3 className="font-semibold text-foreground mb-2">Checked before we list</h3>
             <p className="text-sm text-foreground/50">
-              Each entry is reviewed for basic metadata and linked to its public source so you can decide what to run.
+              We read the basics, try the tool when we can, and link to where it comes from so you can decide if it fits your work.
             </p>
           </div>
 
@@ -119,9 +119,9 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
               </svg>
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Fully Open Source</h3>
+            <h3 className="font-semibold text-foreground mb-2">See who made it</h3>
             <p className="text-sm text-foreground/50">
-              Every tool links directly to its GitHub repository. Read the code, fork it, contribute — full transparency.
+              Every tool links to its public project page so you can read more, ask questions, or get involved if you want to.
             </p>
           </div>
 

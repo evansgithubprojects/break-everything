@@ -326,7 +326,7 @@ async function seedTools(client: Client) {
       name: "PDF Forge",
       slug: "pdf-forge",
       description:
-        "A lightweight, open-source PDF editor that lets you merge, split, rotate, and annotate PDF files. No watermarks, no subscriptions, no nonsense. Built with students in mind who need to handle PDF assignments without paying for Adobe.",
+        "A lightweight PDF editor that lets you merge, split, rotate, and annotate PDF files. No watermarks, no subscriptions, no nonsense. Built with students in mind who need to handle PDF assignments without paying for Adobe.",
       short_description: "Free PDF editor — merge, split, rotate & annotate with zero watermarks.",
       category: "pdf",
       icon: "📄",
@@ -339,8 +339,8 @@ async function seedTools(client: Client) {
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
-      vendor: "Example OSS",
-      privacy_summary: "Shipped via GitHub releases; prefer web or in-app flows when the project offers them.",
+      vendor: "Example team",
+      privacy_summary: "Downloaded from the project’s release page; use a web version when the team offers one.",
       data_handling: "medium",
       review_notes: "Seed data. Replace with real moderation notes before publishing.",
       last_reviewed_at: "2026-03-28",
@@ -365,7 +365,7 @@ async function seedTools(client: Client) {
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
-      vendor: "Example OSS",
+      vendor: "Example team",
       privacy_summary: "Local conversion workflow. Files are not uploaded by default.",
       data_handling: "medium",
       review_notes: "Seed data. Verify publisher identity before production.",
@@ -378,7 +378,7 @@ async function seedTools(client: Client) {
       name: "ClipVault",
       slug: "clipvault",
       description:
-        "A smart clipboard manager that remembers your copy history. Search through past clips, pin frequently used text, and sync snippets across sessions. Perfect for research papers and coding projects where you juggle dozens of references.",
+        "A smart clipboard manager that remembers your copy history. Search through past clips, pin frequently used text, and sync snippets across sessions. Handy for research papers and long assignments when you juggle dozens of references.",
       short_description: "Smart clipboard manager — search history, pin clips & never lose a copy.",
       category: "utility",
       icon: "📋",
@@ -391,8 +391,8 @@ async function seedTools(client: Client) {
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
-      vendor: "Example OSS",
-      privacy_summary: "Clipboard data stays on your machine when you run it locally; check the repo for web options.",
+      vendor: "Example team",
+      privacy_summary: "Clipboard data stays on your machine when you run it locally; see the project page if they offer a web version.",
       data_handling: "medium",
       review_notes: "Seed data. Update before production listing.",
       last_reviewed_at: "2026-04-03",
@@ -622,7 +622,7 @@ export async function getReviewedToolCount(): Promise<number> {
   return Number(row?.count ?? 0);
 }
 
-/** Tools with a non-empty public repo URL (trust signal for “every listing links to source”). */
+/** Tools with a non-empty project URL (trust signal that every pick links somewhere public). */
 export async function getSourceLinkedToolStats(): Promise<{
   linked: number;
   total: number;

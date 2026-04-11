@@ -3,21 +3,67 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useId, useState } from "react";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/tools", label: "Tools" },
 ];
 
+const ABOUT_HREF = "https://github.com/break-everything/break-everything";
+
 export default function Header() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    // Close mobile drawer on client navigations (back/forward and in-app links).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync UI to route; no external subscription API
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMenu();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen, closeMenu]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  const inactive = "text-foreground/60 hover:text-foreground hover:bg-white/5";
+  const active = "text-accent-amber bg-accent-amber/8";
+
+  function isActiveHref(href: string) {
+    return pathname === href;
+  }
+
+  const desktopPipe =
+    "hidden md:inline-block py-2 pl-3 pr-4 text-sm font-medium border-l-2 border-transparent transition-colors";
+  const mobileRow =
+    "block w-full px-4 py-3.5 text-left text-sm font-medium transition-colors md:hidden";
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-card-border bg-background/85 backdrop-blur-xl shadow-[inset_0_-1px_0_rgba(91,143,199,0.12)]">
-      <div className="mx-auto max-w-6xl flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 min-h-[3.25rem]">
+      <div className="relative mx-auto max-w-6xl flex items-center justify-between gap-4 px-3 sm:px-6 py-3 sm:py-4">
         <Link
           href="/"
           className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0 group"
+          onClick={closeMenu}
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-none border border-card-border bg-background">
             <Image
@@ -35,45 +81,110 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center shrink min-w-0 justify-end">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`pl-2 pr-2.5 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium border-l-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? "border-accent-amber text-accent-amber bg-accent-amber/8"
-                    : "border-transparent text-foreground/60 hover:text-foreground hover:bg-white/5"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+        <button
+          type="button"
+          className={`md:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none border-2 border-card-border transition-colors ${
+            menuOpen
+              ? "text-white hover:bg-white/10"
+              : "text-foreground hover:bg-white/5"
+          }`}
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden
+          >
+            {menuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+              />
+            )}
+          </svg>
+        </button>
+
+        <nav className="hidden md:flex items-center" aria-label="Main">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`${desktopPipe} ${
+                isActiveHref(link.href)
+                  ? `border-accent-amber ${active}`
+                  : inactive
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
           <Link
             href="/tools#request-a-tool"
-            className="pl-2 pr-2.5 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium border-l-2 border-transparent text-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors whitespace-nowrap"
+            className={`${desktopPipe} ${inactive}`}
           >
             Request
           </Link>
           <a
-            href="https://github.com/break-everything/break-everything"
+            href={ABOUT_HREF}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Break Everything on GitHub"
-            className="ml-1 sm:ml-2 inline-flex items-center justify-center p-2 sm:px-4 sm:py-2 text-sm font-medium text-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors border border-transparent hover:border-card-border rounded-none"
+            className={`${desktopPipe} ${inactive}`}
           >
-            <svg
-              className="w-5 h-5 sm:hidden shrink-0"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden
+            About
+          </a>
+        </nav>
+
+        {menuOpen && (
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
+            aria-hidden
+            tabIndex={-1}
+            onClick={closeMenu}
+          />
+        )}
+
+        <nav
+          id={menuId}
+          className={`absolute left-0 right-0 top-full z-50 border-b-2 border-card-border bg-background/95 backdrop-blur-xl shadow-lg md:hidden flex flex-col divide-y divide-card-border ${
+            menuOpen ? "" : "hidden"
+          }`}
+          aria-label="Mobile menu"
+        >
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`${mobileRow} ${isActiveHref(link.href) ? active : inactive}`}
+              onClick={closeMenu}
             >
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-            </svg>
-            <span className="hidden sm:inline">GitHub</span>
+              {link.label}
+            </Link>
+          ))}
+          <Link
+            href="/tools#request-a-tool"
+            className={`${mobileRow} ${inactive}`}
+            onClick={closeMenu}
+          >
+            Request
+          </Link>
+          <a
+            href={ABOUT_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${mobileRow} ${inactive}`}
+            onClick={closeMenu}
+          >
+            About
           </a>
         </nav>
       </div>

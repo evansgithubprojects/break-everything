@@ -220,7 +220,7 @@ describe("Tool Requests CRUD", () => {
   it("createToolRequest adds a request with pending status", async () => {
     await createToolRequest({
       tool_name: "Notion Clone",
-      description: "A free open-source Notion alternative",
+      description: "A free Notion-style notes app for students",
       submitted_by: "Alice",
       link: "https://github.com/example/notion-clone",
     });

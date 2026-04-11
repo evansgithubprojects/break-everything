@@ -24,10 +24,10 @@ export async function generateMetadata({
     return { title: "Not found", robots: { index: false, follow: false } };
   }
 
-  const title = `${tool.name} — runtime beta`;
-  const description = `Browser runtime beta for ${tool.name}. ${SITE_NAME}.`;
+  const title = `${tool.name} — try online (beta)`;
+  const description = `Try ${tool.name} in your browser (beta) on ${SITE_NAME}.`;
   const path = `/tools/${slug}/run`;
-  const ogTitle = `${tool.name} (runtime) | ${SITE_NAME}`;
+  const ogTitle = `${tool.name} (beta) | ${SITE_NAME}`;
 
   return {
     title,
@@ -72,20 +72,20 @@ export default async function ToolRuntimePage({
   return (
     <div className="px-6 py-16">
       <div className="mx-auto max-w-3xl glass-card p-8">
-        <h1 className="text-2xl font-bold text-foreground mb-3">{tool.name} runtime beta</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-3">{tool.name} — try online (beta)</h1>
         <p className="text-foreground/55 mb-4">
-          This tool is configured for browser runtime execution. The current beta intentionally limits
-          network access and persists data to session-only browser storage.
+          This experimental view runs the tool inside your browser. For now it limits networking and only
+          keeps data for this browsing session — don&apos;t rely on it for anything you need to save.
         </p>
         <div className="rounded-none border border-card-border bg-white/5 p-4 mb-6">
-          <p className="text-sm text-foreground/60">Runtime entrypoint</p>
+          <p className="text-sm text-foreground/60">Technical entry path</p>
           <p className="font-mono text-xs text-foreground/75 mt-1">
             {tool.runtime_entrypoint || "not configured"}
           </p>
         </div>
         <p className="text-sm text-foreground/45 mb-6">
-          Runtime execution host wiring (WASM/WebContainer/Pyodide) is intentionally feature-flagged and
-          can be attached to this route as providers are vetted.
+          Full in-browser run support is still being rolled out carefully. This page is a placeholder until
+          that work ships.
         </p>
         <Link href={`/tools/${tool.slug}`} className="text-sm text-accent-steel hover:underline">
           Back to tool details

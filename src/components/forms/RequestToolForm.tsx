@@ -210,7 +210,7 @@ export default function RequestToolForm({ variant = "default" }: RequestToolForm
                 name="link"
                 value={form.link}
                 onChange={handleChange}
-                placeholder="https://github.com/..."
+                placeholder="https://…"
                 className={inputClass}
               />
             </div>

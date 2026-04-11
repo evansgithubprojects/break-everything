@@ -127,12 +127,12 @@ export default function AdminAnalyticsPanel() {
             </div>
             <div className="glass-card p-5">
               <div className="text-2xl font-bold text-foreground">{summary.toolActionClicks}</div>
-              <div className="text-xs text-foreground/40 mt-1">Tool action clicks</div>
+              <div className="text-xs text-foreground/40 mt-1">Clicks on tool buttons</div>
             </div>
             <div className="glass-card p-5">
               <div className="text-2xl font-bold text-foreground">{summary.uniqueSlugs}</div>
               <div className="text-xs text-foreground/40 mt-1">
-                {toolSlug ? "Distinct slugs (filtered)" : "Distinct slugs"}
+                {toolSlug ? "Tools with activity (filtered)" : "Tools with activity"}
               </div>
             </div>
             <div className="glass-card p-5">

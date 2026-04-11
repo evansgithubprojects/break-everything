@@ -290,13 +290,13 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
           </div>
         )}
         <div>
-          <label className={labelClass}>GitHub URL</label>
+          <label className={labelClass}>Public project link</label>
           <input
             type="url"
             name="github_url"
             value={form.github_url}
             onChange={handleChange}
-            placeholder="https://github.com/user/repo"
+            placeholder="Usually GitHub — https://…"
             className={inputClass}
             required
           />

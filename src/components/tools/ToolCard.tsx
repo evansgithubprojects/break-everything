@@ -28,12 +28,18 @@ export default function ToolCard({ tool }: { tool: Tool }) {
         <div className="shrink-0">{kindBadge(k)}</div>
       </div>
 
-      <Link href={`/tools/${tool.slug}`} className="block flex-1 min-h-0">
+      <Link
+        href={`/tools/${tool.slug}`}
+        className="block shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-amber/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
         <h3 className="text-lg font-semibold text-foreground group-hover:text-accent-amber transition-colors mb-1">
           {tool.name}
         </h3>
         <p className="text-sm text-foreground/50 mb-4 line-clamp-3">{tool.short_description}</p>
       </Link>
+
+      {/* Absorb extra card height without stretching the detail link hit-area (mobile touch). */}
+      <div className="flex-1 min-h-0 min-w-0" aria-hidden />
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-1.5 flex-wrap">
@@ -51,7 +57,7 @@ export default function ToolCard({ tool }: { tool: Tool }) {
         </span>
       </div>
 
-      <div className="pt-3 border-t border-card-border">
+      <div className="relative z-10 pt-3 border-t border-card-border">
         <ToolAccessLinks tool={tool} variant="card" />
       </div>
     </div>

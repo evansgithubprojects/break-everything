@@ -24,10 +24,10 @@ export async function generateMetadata({
   const valid = Boolean(tool.embed_allowed) && isAllowedEmbedUrl(targetUrl, trusted);
   if (!valid) return { title: "Not found", robots: { index: false, follow: false } };
 
-  const title = `${tool.name} — embedded`;
-  const description = `Run ${tool.name} in an embedded view on ${SITE_NAME}.`;
+  const title = `${tool.name} — use on this page`;
+  const description = `Use ${tool.name} right here on ${SITE_NAME}.`;
   const path = `/tools/${slug}/embed`;
-  const ogTitle = `${tool.name} (embed) | ${SITE_NAME}`;
+  const ogTitle = `${tool.name} | ${SITE_NAME}`;
 
   return {
     title,
@@ -75,12 +75,12 @@ export default async function ToolEmbedPage({
     <div className="px-6 py-10">
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="glass-card p-4 text-sm text-foreground/60">
-          This embedded tool runs in a sandbox with {tool.sandbox_level} restrictions.
+          This view runs the tool in a limited, safer browser frame ({tool.sandbox_level} restrictions).
         </div>
         <div className="rounded-none overflow-hidden border-2 border-card-border">
           <iframe
             src={targetUrl}
-            title={`${tool.name} embedded`}
+            title={`${tool.name} — in-page view`}
             className="w-full min-h-[75vh] bg-black"
             sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-scripts"
             referrerPolicy="strict-origin-when-cross-origin"

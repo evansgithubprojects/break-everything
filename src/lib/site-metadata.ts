@@ -5,7 +5,7 @@ export const SITE_NAME = "Break Everything";
 export const SITE_TAGLINE = "Free Tools for Students";
 
 export const DEFAULT_DESCRIPTION =
-  "A curated, open-source tool directory for students — build-ready listings with source links and clear details.";
+  "Hand-picked free tools for students — each one reviewed, with a clear link to learn more and see who made it.";
 
 export const DEFAULT_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
 
@@ -14,6 +14,6 @@ export const DEFAULT_OG_IMAGE = {
   url: "/og-hero.png",
   width: 1024,
   height: 576,
-  alt: `${SITE_NAME} — free, open-source tools for students`,
+  alt: `${SITE_NAME} — free tools for students`,
   type: "image/png",
 } as const;

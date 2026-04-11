@@ -36,14 +36,14 @@ export default function ToolsPage() {
             All Tools
           </h1>
           <p className="text-foreground/50">
-            Browse our collection of free, open-source tools for students.
+            Free tools we&apos;ve tried to vet for schoolwork and side projects.
           </p>
         </div>
 
         {/* Request a tool — anchor target for /tools#request-a-tool */}
         <section
           id="request-a-tool"
-          className="scroll-mt-28 mb-10 rounded-none border-2 border-accent-amber/40 bg-gradient-to-br from-accent-amber/[0.08] to-transparent p-5 sm:p-6"
+          className="scroll-mt-36 sm:scroll-mt-28 mb-10 rounded-none border-2 border-accent-amber/40 bg-gradient-to-br from-accent-amber/[0.08] to-transparent p-5 sm:p-6"
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
@@ -54,7 +54,7 @@ export default function ToolsPage() {
                 Missing a tool? Suggest one.
               </h2>
               <p className="text-sm text-foreground/55 mt-2 max-w-2xl">
-                Tell us about a free, open-source project we should list, or describe what you need.
+                Tell us about a free tool we should add, or describe what you&apos;re looking for.
                 We read every request.
               </p>
             </div>

@@ -35,11 +35,11 @@ export const metadata: Metadata = {
   },
   description: DEFAULT_DESCRIPTION,
   keywords: [
-    "open source",
     "student tools",
+    "free apps for college",
     "free software",
     "tool directory",
-    "developers",
+    "homework helpers",
     "Break Everything",
   ],
   authors: [{ name: SITE_NAME, url: siteUrl }],
@@ -88,8 +88,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body
+        className="min-h-full flex flex-col bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <AbstractBg />
         <Header />
         <main className="flex-1">{children}</main>
