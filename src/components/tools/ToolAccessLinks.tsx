@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { Tool } from "@/types";
 import { trackToolActionClick } from "@/analytics";
+import MobileStoreDownload from "./MobileStoreDownload";
+import ToolShareLink from "./ToolShareLink";
 import { resolveMobileStoreLinks, resolvePrimaryAction } from "./delivery";
 
 /** Keeps card / parent handlers from seeing the gesture (important on mobile WebKit). */
@@ -71,6 +73,13 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
     ? "inline-flex items-center gap-2 px-5 py-3 rounded-none font-semibold text-sm border-2 border-emerald-500/35 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-colors"
     : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-none text-xs font-semibold font-mono uppercase tracking-wide border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-200/95 hover:bg-emerald-500/15 transition-colors";
 
+  const storeQrDescription =
+    "Scan with your phone’s camera to open the store on that device, or tap Open below to use this device’s browser.";
+
+  const shareLink = (
+    <ToolShareLink tool={tool} className={githubClass} shortLabel={!isHero} />
+  );
+
   const projectLink = (
     <a
       href={tool.github_url}
@@ -88,37 +97,29 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
     </a>
   );
 
-  const storeButtons = hasStores ? (
+  const storeBlocks = hasStores ? (
     <>
       {stores.apple ? (
-        <a
+        <MobileStoreDownload
           href={stores.apple}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={storeClass}
-          onClick={(e) => {
-            isolateActionInteraction(e);
-            void track("app_store");
-          }}
-          onPointerDownCapture={isolateActionInteraction}
-        >
-          App Store
-        </a>
+          linkLabel="App Store"
+          qrDescription={storeQrDescription}
+          trackActionOpen="app_store"
+          storeClass={storeClass}
+          onTrack={track}
+          modalQrSize={isHero ? 220 : 192}
+        />
       ) : null}
       {stores.play ? (
-        <a
+        <MobileStoreDownload
           href={stores.play}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={storeClass}
-          onClick={(e) => {
-            isolateActionInteraction(e);
-            void track("play_store");
-          }}
-          onPointerDownCapture={isolateActionInteraction}
-        >
-          Google Play
-        </a>
+          linkLabel="Google Play"
+          qrDescription={storeQrDescription}
+          trackActionOpen="play_store"
+          storeClass={storeClass}
+          onTrack={track}
+          modalQrSize={isHero ? 220 : 192}
+        />
       ) : null}
     </>
   ) : null;
@@ -128,24 +129,28 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
   if (noPrimary) {
     if (hasStores) {
       return (
-        <div className={`flex flex-wrap items-center gap-2 ${isHero ? "gap-3" : ""}`}>
-          {storeButtons}
+        <div className={`flex flex-wrap items-start gap-2 ${isHero ? "gap-4" : "gap-3"}`}>
+          {storeBlocks}
+          {shareLink}
           {projectLink}
         </div>
       );
     }
     return (
-      <a
-        href={tool.github_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={githubClass}
-        onClick={isolateActionInteraction}
-        onPointerDownCapture={isolateActionInteraction}
-      >
-        {githubIcon}
-        {isHero ? "Project page" : "Project"}
-      </a>
+      <div className={`flex flex-wrap items-start gap-2 ${isHero ? "gap-4" : "gap-3"}`}>
+        {shareLink}
+        <a
+          href={tool.github_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={githubClass}
+          onClick={isolateActionInteraction}
+          onPointerDownCapture={isolateActionInteraction}
+        >
+          {githubIcon}
+          {isHero ? "Project page" : "Project"}
+        </a>
+      </div>
     );
   }
 
@@ -186,9 +191,10 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
   );
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${isHero ? "gap-3" : ""}`}>
-      {storeButtons}
+    <div className={`flex flex-wrap items-start gap-2 ${isHero ? "gap-4" : "gap-3"}`}>
+      {storeBlocks}
       {primaryEl}
+      {shareLink}
       {projectLink}
     </div>
   );

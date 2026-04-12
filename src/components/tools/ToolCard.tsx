@@ -31,7 +31,7 @@ export default function ToolCard({ tool }: { tool: Tool }) {
   const platformBadges = tool.platform.split(",").map((p) => p.trim());
 
   return (
-    <div className="glass-card p-6 h-full flex flex-col group hover:border-accent-amber/20 transition-colors">
+    <div className="tool-card glass-card p-6 h-full flex flex-col group transition-colors">
       <div className="flex items-start justify-between mb-4">
         <span className="text-3xl">{tool.icon}</span>
         <div className="shrink-0">{kindBadge(tool)}</div>
@@ -41,7 +41,7 @@ export default function ToolCard({ tool }: { tool: Tool }) {
         href={`/tools/${tool.slug}`}
         className="block shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-amber/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <h3 className="text-lg font-semibold text-foreground group-hover:text-accent-amber transition-colors mb-1">
+        <h3 className="tool-card__title text-lg font-semibold text-foreground transition-colors mb-1">
           {tool.name}
         </h3>
         <p className="text-sm text-foreground/50 mb-4 line-clamp-3">{tool.short_description}</p>

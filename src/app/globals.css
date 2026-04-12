@@ -58,10 +58,25 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.glass-card:hover {
-  background: var(--surface-hover);
-  border-color: color-mix(in srgb, var(--accent-amber) 45%, transparent);
-  transform: translateY(-2px);
+/* Only real pointers that support hover — avoids “stuck” pressed look on touch */
+@media (hover: hover) and (pointer: fine) {
+  .glass-card:hover {
+    background: var(--surface-hover);
+    border-color: color-mix(in srgb, var(--accent-amber) 45%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .tool-card.group:hover .tool-card__title {
+    color: var(--accent-amber);
+  }
+
+  .github-project-card.group:hover .github-project-card__icon {
+    color: var(--foreground);
+  }
+
+  .github-project-card.group:hover .github-project-card__label {
+    color: var(--foreground);
+  }
 }
 
 .gradient-border {
