@@ -182,19 +182,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      {/* Ad Column */}
-      <section className="px-6 pb-24">
-        <div className="mx-auto max-w-6xl">
-          <Script
-            src="https://pl29162066.profitablecpmratenetwork.com/c1ef9b9d2f016bfd38d6ac41ca7d015f/invoke.js"
-            strategy="afterInteractive"
-            async
-            data-cfasync="false"
-          />
-          <div id="container-c1ef9b9d2f016bfd38d6ac41ca7d015f" />
-        </div>
-      </section>
     </div>
   );
 }
