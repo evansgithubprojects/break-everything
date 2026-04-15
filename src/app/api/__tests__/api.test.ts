@@ -432,7 +432,7 @@ describe("Tools API", () => {
     expect((await res.json()).error).toContain("at least one");
   });
 
-  it("POST /api/tools normalizes and dedupes categories", async () => {
+  it("POST /api/tools dedupes categories case-insensitively", async () => {
     await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Normalized Categories",
@@ -452,7 +452,7 @@ describe("Tools API", () => {
     });
     expect(getRes.status).toBe(200);
     const data = await getRes.json();
-    expect(data.tool.categories).toEqual(["utility", "tools"]);
+    expect(data.tool.categories).toEqual(["Utility", "TOOLS"]);
 
     const delReq = jsonRequest("http://localhost/api/tools/normalized-categories", "DELETE");
     const delRes = await deleteToolRoute(delReq, {
