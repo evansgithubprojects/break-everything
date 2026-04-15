@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import PageAdScripts from "@/components/ads/PageAdScripts";
 import ToolAccessLinks from "@/components/tools/ToolAccessLinks";
 import TrustPanel from "@/components/tools/TrustPanel";
 import {
@@ -96,7 +95,6 @@ export default async function ToolDetailPage({
 
   return (
     <div className="px-6 py-16">
-      <PageAdScripts />
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-foreground/40 mb-8">
