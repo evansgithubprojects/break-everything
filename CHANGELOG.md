@@ -16,8 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Documented current repository status, API surface, and setup expectations for new contributors.
+- Refreshed Markdown docs (`README`, `STRUCTURE`, `CONTRIBUTING`, agent pointers) to match current layout (`src/config`, analytics APIs, env vars, test scripts).
 
 ### Security
 
-- Added explicit documentation note that current admin password seeding is development-oriented and should be changed before real deployment.
+- Admin authentication relies on `ADMIN_PASSWORD` and `SESSION_SECRET` at runtime; do not commit real values or checked-in `.env` files.

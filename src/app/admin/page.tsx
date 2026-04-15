@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AdminAnalyticsPanel } from "@/components/admin";
 import AdminToolForm from "@/components/forms/AdminToolForm";
-import type { Tool, ToolRequest } from "@/types";
+import type { Tool } from "@/types";
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -16,9 +16,6 @@ export default function AdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  const [requests, setRequests] = useState<ToolRequest[]>([]);
-  const [requestFilter, setRequestFilter] = useState<string>("pending");
   const [adminTab, setAdminTab] = useState<"manage" | "analytics">("manage");
 
   const isMounted = useRef(true);
@@ -30,14 +27,6 @@ export default function AdminPage() {
     const res = await fetch("/api/tools");
     const data = await res.json();
     if (isMounted.current) setTools(data.tools);
-  }
-
-  async function fetchRequests() {
-    const res = await fetch("/api/requests");
-    if (res.ok && isMounted.current) {
-      const data = await res.json();
-      setRequests(data.requests);
-    }
   }
 
   useEffect(() => {
@@ -58,17 +47,10 @@ export default function AdminPage() {
     if (!authenticated) return;
     let cancelled = false;
     async function load() {
-      const [toolsRes, reqsRes] = await Promise.all([
-        fetch("/api/tools"),
-        fetch("/api/requests"),
-      ]);
+      const toolsRes = await fetch("/api/tools");
       if (cancelled) return;
       const toolsData = await toolsRes.json();
       setTools(toolsData.tools);
-      if (reqsRes.ok) {
-        const reqsData = await reqsRes.json();
-        setRequests(reqsData.requests);
-      }
     }
     load();
     return () => { cancelled = true; };
@@ -125,27 +107,6 @@ export default function AdminPage() {
     setShowForm(false);
     setEditingTool(null);
   }
-
-  async function handleRequestStatus(id: number, status: string) {
-    await fetch(`/api/requests/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    await fetchRequests();
-  }
-
-  async function handleDeleteRequest(id: number) {
-    await fetch(`/api/requests/${id}`, { method: "DELETE" });
-    await fetchRequests();
-  }
-
-  const filteredRequests =
-    requestFilter === "all"
-      ? requests
-      : requests.filter((r) => r.status === requestFilter);
-
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
 
   if (checking) {
     return (
@@ -223,7 +184,7 @@ export default function AdminPage() {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
               <p className="text-foreground/50 text-sm mt-1">
-                Manage tools, requests, and analytics.
+                Manage tools and analytics.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -292,124 +253,6 @@ export default function AdminPage() {
             />
           </div>
         )}
-
-        {/* Tool Requests */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-foreground">Tool Requests</h2>
-              {pendingCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-amber/15 text-accent-amber border border-accent-amber/30">
-                  {pendingCount} new
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              {["pending", "approved", "dismissed", "all"].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setRequestFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-                    requestFilter === f
-                      ? "bg-accent-amber/15 text-accent-amber border border-accent-amber/30"
-                      : "text-foreground/40 hover:text-foreground/60"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {filteredRequests.length === 0 ? (
-            <div className="glass-card p-8 text-center">
-              <p className="text-foreground/40 text-sm">
-                {requestFilter === "pending"
-                  ? "No pending requests."
-                  : `No ${requestFilter === "all" ? "" : requestFilter + " "}requests.`}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="glass-card p-4 flex items-start gap-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-semibold text-foreground text-sm">
-                        {req.tool_name}
-                      </h4>
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${
-                          req.status === "pending"
-                            ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
-                            : req.status === "approved"
-                              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                              : "bg-foreground/5 text-foreground/30 border border-foreground/10"
-                        }`}
-                      >
-                        {req.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-foreground/50 mt-1 line-clamp-2">
-                      {req.description}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      {req.submitted_by && (
-                        <span className="text-[11px] text-foreground/30">
-                          by {req.submitted_by}
-                        </span>
-                      )}
-                      {req.link && (
-                        <a
-                          href={req.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-accent-steel hover:text-accent-steel/80 transition-colors"
-                        >
-                          View link
-                        </a>
-                      )}
-                      <span className="text-[11px] text-foreground/20">
-                        {new Date(req.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {req.status === "pending" && (
-                      <>
-                        <button
-                          onClick={() => handleRequestStatus(req.id, "approved")}
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 transition-colors"
-                          title="Approve"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleRequestStatus(req.id, "dismissed")}
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-foreground/5 text-foreground/40 hover:text-foreground/60 border border-foreground/10 transition-colors"
-                          title="Dismiss"
-                        >
-                          Dismiss
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => handleDeleteRequest(req.id)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-                      title="Delete"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Tools List */}
         <h2 className="text-xl font-bold text-foreground mb-4">Tools</h2>

@@ -128,7 +128,7 @@ export default function Header() {
             </Link>
           ))}
           <Link
-            href="/tools#request-a-tool"
+            href="/request-tool"
             className={`${desktopPipe} ${inactive}`}
           >
             Request
@@ -171,7 +171,7 @@ export default function Header() {
             </Link>
           ))}
           <Link
-            href="/tools#request-a-tool"
+            href="/request-tool"
             className={`${mobileRow} ${inactive}`}
             onClick={closeMenu}
           >

@@ -71,7 +71,7 @@ export default async function HomePage() {
               </a>
             </div>
             <Link
-              href="/tools#request-a-tool"
+              href="/request-tool"
               className="text-sm font-semibold text-accent-amber hover:text-accent-amber/85 underline-offset-4 hover:underline decoration-accent-amber/50"
             >
               Don&apos;t see what you need? Request a tool
@@ -160,7 +160,7 @@ export default async function HomePage() {
               </div>
               <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
                 <Link
-                  href="/tools#request-a-tool"
+                  href="/request-tool"
                   className="text-sm font-medium text-foreground/50 hover:text-accent-amber transition-colors"
                 >
                   Request a tool

@@ -10,25 +10,28 @@ Break Everything helps users discover free tools (web-first listings with option
 - View per-tool detail pages at `/tools/[slug]`
 - Inspect per-tool listing metadata (vendor, privacy, data handling, review date)
 - Submit tool requests from the public UI
-- Manage tools and requests from `/admin` after authentication
-- Use built-in API routes for tools, auth, and requests
+- Manage tools, requests, and analytics from `/admin` after authentication
+- Use built-in API routes for tools, auth, requests, events, and analytics
 
 ## Tech Stack
 
 - Next.js (App Router)
-- React
+- React 19
 - TypeScript
-- SQLite via `better-sqlite3`
-- Turso/libSQL via `@libsql/client` (production-ready client)
-- Jest (`ts-jest`) for tests
-- ESLint for linting
+- Tailwind CSS v4 (`@tailwindcss/postcss`)
+- SQLite via `@libsql/client` (local `file:` database or hosted Turso)
+- Jest (`ts-jest`) for unit/API tests; Playwright for E2E (`npm run test:e2e`)
+- ESLint (`eslint-config-next`)
+- Vercel Analytics & Speed Insights (optional in production)
 
 ## Environment Variables
 
-- `ADMIN_PASSWORD` - admin login password hash source (required)
-- `SESSION_SECRET` - cookie/session signing secret (required)
-- `TURSO_DATABASE_URL` - Turso database URL (required for production Turso client)
-- `TURSO_AUTH_TOKEN` - Turso auth token (required for production Turso client)
+- `ADMIN_PASSWORD` - admin login password (required at runtime; stored hashed)
+- `SESSION_SECRET` - session cookie secret (required)
+- `TURSO_DATABASE_URL` - Turso URL, or omit for local `file:` SQLite under `data/`
+- `TURSO_AUTH_TOKEN` - required when `TURSO_DATABASE_URL` is a remote Turso URL
+- `NEXT_PUBLIC_SITE_URL` - canonical site URL for metadata (optional; defaults for local dev)
+- `SEED_TOOL_LIBRARY` - set to `1` in non-production to seed sample tools locally (optional)
 
 ## Project Structure
 

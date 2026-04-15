@@ -9,7 +9,7 @@ import {
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-import type { AnalyticsSummary, ToolRequest } from "@/types";
+import type { AnalyticsSummary } from "@/types";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -261,17 +261,6 @@ async function initSchema(client: Client) {
       sql: `CREATE TABLE IF NOT EXISTS admin (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         password_hash TEXT NOT NULL
-      );`,
-    },
-    {
-      sql: `CREATE TABLE IF NOT EXISTS tool_requests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tool_name TEXT NOT NULL,
-        description TEXT NOT NULL,
-        submitted_by TEXT,
-        link TEXT,
-        status TEXT NOT NULL DEFAULT 'pending',
-        created_at TEXT DEFAULT (datetime('now'))
       );`,
     },
     {
@@ -659,39 +648,6 @@ export async function getSourceLinkedToolStats(): Promise<{
     total: Number(row?.total ?? 0),
     linked: Number(row?.linked ?? 0),
   };
-}
-
-// --- Tool Requests ---
-
-export type { ToolRequest };
-
-export async function createToolRequest(req: {
-  tool_name: string;
-  description: string;
-  submitted_by?: string;
-  link?: string;
-}) {
-  return execute(
-    `INSERT INTO tool_requests (tool_name, description, submitted_by, link)
-     VALUES (?, ?, ?, ?)`,
-    [req.tool_name, req.description, req.submitted_by || null, req.link || null]
-  );
-}
-
-export async function getAllToolRequests(): Promise<ToolRequest[]> {
-  return queryAll("SELECT * FROM tool_requests ORDER BY created_at DESC");
-}
-
-export async function getPendingToolRequests(): Promise<ToolRequest[]> {
-  return queryAll("SELECT * FROM tool_requests WHERE status = 'pending' ORDER BY created_at DESC");
-}
-
-export async function updateToolRequestStatus(id: number, status: string) {
-  return execute("UPDATE tool_requests SET status = ? WHERE id = ?", [status, id]);
-}
-
-export async function deleteToolRequest(id: number) {
-  return execute("DELETE FROM tool_requests WHERE id = ?", [id]);
 }
 
 // --- Analytics (UTC day boundaries for rollups; created_at matches SQLite datetime('now')) ---

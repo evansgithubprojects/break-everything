@@ -26,7 +26,7 @@ src/
 |   |-- admin/              # AdminAnalyticsPanel
 |   |-- forms/
 |   |-- layout/
-|   |-- tools/              # Cards, trust, delivery, share, mobile store
+|   |-- tools/              # Cards, trust, delivery, share, mobile store, embeds (e.g. Jira)
 |   `-- index.ts            # Namespaced barrels (Admin, Forms, Layout, Tools)
 |-- config/                 # App-wide constants (SEO, site name, AdSense id)
 |   |-- site-metadata.ts

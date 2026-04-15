@@ -33,16 +33,10 @@ import {
   getReviewedToolCount,
   getSourceLinkedToolStats,
   getTotalDownloads,
-  createToolRequest,
-  getAllToolRequests,
-  getPendingToolRequests,
-  updateToolRequestStatus,
-  deleteToolRequest,
   recordAnalyticsEvent,
   getAnalyticsSummary,
 } from "@/server/db";
 import type { Tool } from "@/types";
-import type { ToolRequest } from "@/types";
 
 beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR)) {
@@ -206,77 +200,6 @@ describe("Admin password verification", () => {
 
   it("rejects empty string", async () => {
     expect(await verifyAdminPassword("")).toBe(false);
-  });
-});
-
-// --- Tool Requests ---
-
-describe("Tool Requests CRUD", () => {
-  it("starts with no requests", async () => {
-    const reqs = await getAllToolRequests();
-    expect(reqs.length).toBe(0);
-  });
-
-  it("createToolRequest adds a request with pending status", async () => {
-    await createToolRequest({
-      tool_name: "Notion Clone",
-      description: "A free Notion-style notes app for students",
-      submitted_by: "Alice",
-      link: "https://github.com/example/notion-clone",
-    });
-
-    const reqs = (await getAllToolRequests()) as ToolRequest[];
-    expect(reqs.length).toBe(1);
-    expect(reqs[0].tool_name).toBe("Notion Clone");
-    expect(reqs[0].status).toBe("pending");
-    expect(reqs[0].submitted_by).toBe("Alice");
-  });
-
-  it("createToolRequest works with optional fields omitted", async () => {
-    await createToolRequest({
-      tool_name: "Anon Tool",
-      description: "Some tool",
-    });
-
-    const reqs = (await getAllToolRequests()) as ToolRequest[];
-    expect(reqs.length).toBe(2);
-    const anon = reqs.find((r) => r.tool_name === "Anon Tool")!;
-    expect(anon.submitted_by).toBeNull();
-    expect(anon.link).toBeNull();
-  });
-
-  it("getPendingToolRequests only returns pending ones", async () => {
-    const pending = await getPendingToolRequests();
-    expect(pending.length).toBe(2);
-  });
-
-  it("updateToolRequestStatus changes the status", async () => {
-    const reqs = (await getAllToolRequests()) as ToolRequest[];
-    const first = reqs[reqs.length - 1]; // oldest
-
-    await updateToolRequestStatus(first.id, "approved");
-
-    const updated = (await getAllToolRequests()) as ToolRequest[];
-    const found = updated.find((r) => r.id === first.id)!;
-    expect(found.status).toBe("approved");
-
-    const pending = await getPendingToolRequests();
-    expect(pending.length).toBe(1);
-  });
-
-  it("deleteToolRequest removes a request", async () => {
-    const reqs = (await getAllToolRequests()) as ToolRequest[];
-    await deleteToolRequest(reqs[0].id);
-
-    expect((await getAllToolRequests()).length).toBe(1);
-  });
-
-  // Clean up remaining
-  afterAll(async () => {
-    const reqs = (await getAllToolRequests()) as ToolRequest[];
-    for (const r of reqs) {
-      await deleteToolRequest(r.id);
-    }
   });
 });
 
