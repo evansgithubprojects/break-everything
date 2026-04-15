@@ -5,6 +5,7 @@ import { isAuthenticated } from "@/server/auth";
 import { rateLimiters } from "@/server/rate-limit";
 import { jsonServerError } from "@/server/api-response";
 import { readJsonObjectBody } from "@/server/parse-json-body";
+import { enforceSameOrigin } from "@/server/same-origin";
 import { toPublicTool } from "@/server/tool-public";
 import {
   isAllowedEmbedUrl,
@@ -40,6 +41,9 @@ export async function PUT(
 ) {
   const blocked = rateLimiters.adminWrite(request);
   if (blocked) return blocked;
+
+  const sameOriginBlocked = enforceSameOrigin(request);
+  if (sameOriginBlocked) return sameOriginBlocked;
 
   const authed = await isAuthenticated();
   if (!authed) {
@@ -226,6 +230,9 @@ export async function DELETE(
 ) {
   const blocked = rateLimiters.adminWrite(request);
   if (blocked) return blocked;
+
+  const sameOriginBlocked = enforceSameOrigin(request);
+  if (sameOriginBlocked) return sameOriginBlocked;
 
   const authed = await isAuthenticated();
   if (!authed) {

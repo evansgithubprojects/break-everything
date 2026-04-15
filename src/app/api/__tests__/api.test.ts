@@ -81,10 +81,12 @@ async function loginAsAdmin() {
 }
 
 function jsonRequest(url: string, method: string, body?: object): NextRequest {
+  const origin = new URL(url).origin;
   const init: { method: string; headers: Record<string, string>; body?: string } = {
     method,
     headers: {
       "Content-Type": "application/json",
+      origin,
       "x-forwarded-for": `test-${Math.random()}`,
     },
   };
@@ -130,6 +132,20 @@ describe("Auth API", () => {
     const res = await postAuth(req);
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("Invalid payload");
+  });
+
+  it("POST /api/auth rejects cross-site origin", async () => {
+    const req = new NextRequest("http://localhost/api/auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        origin: "https://evil.example",
+        "x-forwarded-for": "198.51.100.12",
+      },
+      body: JSON.stringify({ password: "test-admin-password" }),
+    });
+    const res = await postAuth(req);
+    expect(res.status).toBe(403);
   });
 
   it("POST /api/auth accepts correct password and sets session", async () => {
@@ -181,7 +197,7 @@ describe("Auth API", () => {
 
   it("DELETE /api/auth clears session", async () => {
     await loginAsAdmin();
-    await deleteAuth();
+    await deleteAuth(jsonRequest("http://localhost/api/auth", "DELETE"));
     expect(mockCookieStore.has("be_admin_session")).toBe(false);
   });
 });
@@ -211,6 +227,27 @@ describe("Tools API", () => {
     });
     const res = await postTool(req);
     expect(res.status).toBe(401);
+  });
+
+  it("POST /api/tools rejects cross-site origin", async () => {
+    await loginAsAdmin();
+    const req = new NextRequest("http://localhost/api/tools", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        origin: "https://evil.example",
+        "x-forwarded-for": "198.51.100.13",
+      },
+      body: JSON.stringify({
+        name: "Cross Site",
+        slug: "cross-site",
+        description: "desc",
+        short_description: "short",
+        categories: "utility",
+      }),
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(403);
   });
 
   it("POST /api/tools rejects forged session cookie", async () => {

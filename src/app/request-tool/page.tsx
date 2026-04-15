@@ -35,7 +35,7 @@ export default function RequestToolRedirectPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)] transition-all hover:scale-[1.02]"
             >
-              Continue to Jira form
+              Continue to form
             </a>
             <Link
               href="/tools#request-a-tool"
