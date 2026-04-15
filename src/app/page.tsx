@@ -32,21 +32,6 @@ export default async function HomePage() {
 
   return (
     <div className="relative">
-      <div className="mx-auto max-w-[1400px] lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8 xl:gap-10">
-        <aside className="hidden lg:block px-4 pt-14">
-          <div className="sticky top-24">
-            <div className="glass-card p-3">
-              <Script
-                src="https://pl29162066.profitablecpmratenetwork.com/c1ef9b9d2f016bfd38d6ac41ca7d015f/invoke.js"
-                strategy="afterInteractive"
-                data-cfasync="false"
-              />
-              <div id="container-c1ef9b9d2f016bfd38d6ac41ca7d015f" />
-            </div>
-          </div>
-        </aside>
-
-        <main>
       {/* Hero Section */}
       <section className="relative px-6 pt-12 pb-16 md:pt-16 md:pb-24">
         <div className="mx-auto max-w-6xl text-center">
@@ -197,8 +182,19 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-        </main>
-      </div>
+
+      <section className="px-6 pb-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="glass-card p-3">
+            <Script
+              src="https://pl29162066.profitablecpmratenetwork.com/c1ef9b9d2f016bfd38d6ac41ca7d015f/invoke.js"
+              strategy="afterInteractive"
+              data-cfasync="false"
+            />
+            <div id="container-c1ef9b9d2f016bfd38d6ac41ca7d015f" />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
