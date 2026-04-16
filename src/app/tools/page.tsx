@@ -78,15 +78,12 @@ export default function ToolsPage() {
               <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                 Missing a tool? Suggest one.
               </h2>
-              <p className="text-sm text-foreground/55 mt-2 max-w-2xl">
-                We route suggestions through a short confirmation page first so you can see where the link goes before leaving this site.
-              </p>
             </div>
             <Link
               href="/request-tool"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)] transition-all hover:scale-[1.02] w-full sm:w-auto"
             >
-              Continue to request form
+              Open request form
             </Link>
           </div>
         </section>
