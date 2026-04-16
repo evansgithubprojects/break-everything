@@ -56,7 +56,7 @@ export default function ToolsPage() {
     <div className="px-6 py-16">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
             All Tools
           </h1>
@@ -65,54 +65,46 @@ export default function ToolsPage() {
           </p>
         </div>
 
-        {/* Request a tool — anchor target for /tools#request-a-tool */}
-        <section
-          id="request-a-tool"
-          className="scroll-mt-36 sm:scroll-mt-28 mb-10 rounded-none border-2 border-accent-amber/40 bg-gradient-to-br from-accent-amber/[0.08] to-transparent p-5 sm:p-6"
-        >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-mono font-semibold uppercase tracking-widest text-accent-lime/90 mb-2">
-                Community
-              </p>
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                Missing a tool? Suggest one.
-              </h2>
+        {/* Category Filters */}
+        <div className="mb-8 flex flex-col gap-3">
+          <div className="text-xs sm:text-sm text-foreground/45">
+            <span className="font-medium text-foreground/55">Quick tip:</span>{" "}
+            bookmark this page for easy access to the library.
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setActiveCategory("all")}
+                className={`px-4 py-2 rounded-none text-sm font-medium border-2 transition-colors ${
+                  activeCategory === "all"
+                    ? "bg-accent-amber/15 text-accent-amber border-accent-amber/40"
+                    : "border-card-border text-foreground/60 hover:text-foreground hover:border-accent-steel/35 bg-white/[0.03]"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-4 py-2 rounded-none text-sm font-medium border-2 transition-colors ${
+                    activeCategory === cat
+                      ? "bg-accent-amber/15 text-accent-amber border-accent-amber/40"
+                      : "border-card-border text-foreground/60 hover:text-foreground hover:border-accent-steel/35 bg-white/[0.03]"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
             <Link
+              id="request-a-tool"
               href="/request-tool"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-none font-semibold text-sm bg-accent-amber hover:bg-accent-amber/90 text-background border-2 border-accent-steel/40 shadow-[2px_2px_0_rgba(91,143,199,0.35)] transition-all hover:scale-[1.02] w-full sm:w-auto"
+              className="scroll-mt-36 sm:scroll-mt-28 inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-none font-semibold text-xs sm:text-sm bg-accent-amber hover:bg-accent-amber/90 text-background border-2 border-accent-steel/40 transition-colors w-full sm:w-auto shrink-0"
             >
-              Open request form
+              Suggest a tool
             </Link>
           </div>
-        </section>
-
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 mb-8 flex-wrap">
-          <button
-            onClick={() => setActiveCategory("all")}
-            className={`px-4 py-2 rounded-none text-sm font-medium border-2 transition-colors ${
-              activeCategory === "all"
-                ? "bg-accent-amber/15 text-accent-amber border-accent-amber/40"
-                : "border-card-border text-foreground/60 hover:text-foreground hover:border-accent-steel/35 bg-white/[0.03]"
-            }`}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-none text-sm font-medium border-2 transition-colors ${
-                activeCategory === cat
-                  ? "bg-accent-amber/15 text-accent-amber border-accent-amber/40"
-                  : "border-card-border text-foreground/60 hover:text-foreground hover:border-accent-steel/35 bg-white/[0.03]"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
         </div>
 
         {/* Tools Grid */}
