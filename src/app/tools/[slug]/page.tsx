@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ToolAccessLinks from "@/components/tools/ToolAccessLinks";
+import FavoriteToggle from "@/components/tools/FavoriteToggle";
 import TrustPanel from "@/components/tools/TrustPanel";
 import {
   DEFAULT_OG_IMAGE,
@@ -119,6 +120,11 @@ export default async function ToolDetailPage({
               <h1 className="text-3xl md:text-4xl font-bold text-foreground">
                 {tool.name}
               </h1>
+              <FavoriteToggle
+                slug={tool.slug}
+                name={tool.name}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-none text-xs font-semibold border-2 border-accent-lime/35 bg-accent-lime/10 text-accent-lime hover:bg-accent-lime/15 transition-colors"
+              />
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none text-xs font-medium bg-accent-lime/10 text-accent-lime border-2 border-accent-lime/35 font-mono uppercase tracking-wide">
                 <span className="w-1.5 h-1.5 bg-accent-lime rotate-45 shrink-0" />
                 Community tool

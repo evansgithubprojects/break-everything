@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ToolCard from "@/components/tools/ToolCard";
+import { useFavorites } from "@/components/tools/useFavorites";
 import type { Tool } from "@/types";
 
 export default function ToolsPage() {
@@ -10,6 +11,7 @@ export default function ToolsPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const { favorites } = useFavorites();
 
   useEffect(() => {
     fetch("/api/tools")
@@ -51,6 +53,8 @@ export default function ToolsPage() {
                 : [];
           return values.some((value) => value.trim().toLowerCase() === activeCategory.toLowerCase());
         });
+  const favoriteSet = new Set(favorites);
+  const favoriteTools = tools.filter((tool) => favoriteSet.has(tool.slug));
 
   return (
     <div className="px-6 py-16">
@@ -106,6 +110,33 @@ export default function ToolsPage() {
             </Link>
           </div>
         </div>
+
+        {/* Favorite Tools */}
+        <section className="mb-10">
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-foreground">Favorite Tools</h2>
+              <p className="text-sm text-foreground/45 mt-1">
+                Tools you pin for quick access in this browser.
+              </p>
+            </div>
+          </div>
+
+          {favoriteTools.length === 0 ? (
+            <div className="glass-card p-6 border border-card-border/80">
+              <p className="text-sm text-foreground/55">
+                No favorites yet. Tap <span className="text-foreground/75">Favorite</span> on a tool card or detail
+                page to pin it here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {favoriteTools.map((tool) => (
+                <ToolCard key={`favorite-${tool.id}`} tool={tool} />
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Tools Grid */}
         {loading ? (
