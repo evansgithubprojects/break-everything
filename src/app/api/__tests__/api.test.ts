@@ -351,7 +351,7 @@ describe("Tools API", () => {
       delivery_mode: "browserRuntime",
       web_url: "",
       download_url: "",
-      runtime_entrypoint: "/runtime/tools/no-external-url.js",
+      runtime_name: "no-external-url",
       github_url: "https://github.com/test/runtime-no-web-url",
       platform: "web",
     });
@@ -366,7 +366,8 @@ describe("Tools API", () => {
     expect(data.tool.tool_kind).toBe("web");
     expect(data.tool.web_url).toBe("");
     expect(data.tool.runtime_supported).toBe(1);
-    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/no-external-url.js");
+    expect(data.tool.runtime_name).toBe("no-external-url");
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/no-external-url/index.html");
   });
 
   it("POST /api/tools rejects non-empty invalid web_url for web tools", async () => {
@@ -387,7 +388,7 @@ describe("Tools API", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST /api/tools accepts runtime_manifest and derives runtime entrypoint", async () => {
+  it("POST /api/tools accepts browserRuntime with runtime_name", async () => {
     await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Runtime Tool",
@@ -398,15 +399,7 @@ describe("Tools API", () => {
       tool_kind: "web",
       delivery_mode: "browserRuntime",
       web_url: "https://app.example.com/runtime-tool",
-      runtime_manifest: {
-        version: 1,
-        entry: "/runtime/tools/runtime-tool.js",
-        executionMode: "module",
-        permissions: { network: false, storage: true },
-        allowedOrigins: ["https://app.example.com"],
-        storagePolicy: "session",
-        capabilities: ["fileOpen", "share"],
-      },
+      runtime_name: "runtime-tool",
       github_url: "https://github.com/test/runtime-tool",
       platform: "web",
     });
@@ -419,10 +412,11 @@ describe("Tools API", () => {
     });
     const data = await getRes.json();
     expect(data.tool.runtime_supported).toBe(1);
-    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/runtime-tool.js");
+    expect(data.tool.runtime_name).toBe("runtime-tool");
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/runtime-tool/index.html");
   });
 
-  it("POST /api/tools rejects invalid runtime_manifest", async () => {
+  it("POST /api/tools rejects browserRuntime without runtime_name", async () => {
     await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Invalid Runtime Tool",
@@ -432,10 +426,7 @@ describe("Tools API", () => {
       categories: ["utility"],
       tool_kind: "web",
       web_url: "https://app.example.com/invalid-runtime-tool",
-      runtime_manifest: {
-        version: 0,
-        entry: " ",
-      },
+      delivery_mode: "browserRuntime",
       github_url: "https://github.com/test/invalid-runtime-tool",
       platform: "web",
     });
@@ -443,7 +434,26 @@ describe("Tools API", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST /api/tools builds manifest from runtime_manifest_preset", async () => {
+  it("POST /api/tools rejects invalid runtime_name", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Bad Name Tool",
+      slug: "bad-runtime-name-tool",
+      description: "bad",
+      short_description: "bad",
+      categories: ["utility"],
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      runtime_name: "Bad_Folder",
+      web_url: "https://app.example.com/x",
+      github_url: "https://github.com/test/x",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/tools creates runtime with runtime_supported and name", async () => {
     await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
       name: "Preset Runtime Tool",
@@ -452,10 +462,10 @@ describe("Tools API", () => {
       short_description: "runtime preset",
       categories: ["utility"],
       tool_kind: "web",
-      delivery_mode: "browserRuntime",
+      delivery_mode: "download",
       web_url: "https://app.example.com/preset-runtime-tool",
-      runtime_manifest_preset: "localOnly",
-      runtime_entrypoint: "/runtime/tools/preset-runtime-tool.js",
+      runtime_supported: true,
+      runtime_name: "preset-runtime-tool",
       github_url: "https://github.com/test/preset-runtime-tool",
       platform: "web",
     });
@@ -468,7 +478,8 @@ describe("Tools API", () => {
     });
     const data = await getRes.json();
     expect(data.tool.runtime_supported).toBe(1);
-    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/preset-runtime-tool.js");
+    expect(data.tool.runtime_name).toBe("preset-runtime-tool");
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/preset-runtime-tool/index.html");
   });
 
   it("POST /api/tools returns 500 for duplicate slug", async () => {

@@ -11,6 +11,7 @@ type RuntimeHostTool = Pick<
   Tool,
   | "name"
   | "slug"
+  | "runtime_name"
   | "runtime_entrypoint"
   | "runtime_manifest"
   | "runtime_supported"

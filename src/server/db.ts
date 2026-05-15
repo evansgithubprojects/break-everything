@@ -11,6 +11,12 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import type { AnalyticsSummary, RuntimeManifest, Tool } from "@/types";
 import { coerceRuntimeEntryToRelative, toolSupportsInAppRuntime } from "@/lib/first-party-inapp";
+import {
+  defaultRuntimeManifestForName,
+  inferRuntimeNameFromEntryPath,
+  normalizeRuntimeName,
+  runtimeIndexHtmlPath,
+} from "@/lib/runtime-name";
 import { getServerFirstPartyOrigin } from "@/server/first-party-origin";
 import { isAllowedHttpUrl, parseRuntimeManifestInput } from "@/server/validation";
 
@@ -196,13 +202,21 @@ function normalizeToolRow<T extends Record<string, unknown>>(row: T): T {
   const categories = parseCategoriesValue(row.categories);
   const fallbackCategory = typeof row.category === "string" ? row.category.trim() : "";
   const resolved = categories.length > 0 ? categories : fallbackCategory ? [fallbackCategory] : [];
-  const runtimeManifest =
-    parseRuntimeManifestJson(row.runtime_manifest_json) ?? fallbackRuntimeManifestFromLegacy(row);
+  const runtimeName = normalizeRuntimeName(row.runtime_name) ?? "";
+  let runtime_manifest: RuntimeManifest | null = null;
+  if (runtimeName) {
+    runtime_manifest = defaultRuntimeManifestForName(runtimeName);
+  } else {
+    runtime_manifest =
+      parseRuntimeManifestJson(row.runtime_manifest_json) ?? fallbackRuntimeManifestFromLegacy(row);
+  }
   return {
     ...row,
     categories: resolved,
     category: primaryCategoryFrom(resolved),
-    runtime_manifest: runtimeManifest,
+    runtime_name: runtimeName,
+    runtime_entrypoint: runtimeName ? runtimeIndexHtmlPath(runtimeName) : String(row.runtime_entrypoint ?? ""),
+    runtime_manifest,
     delivery_mode: normalizeDeliveryMode(row),
     embed_allowed: 0,
     embed_url: "",
@@ -277,6 +291,43 @@ async function migrateToolsColumns(client: Client) {
   }
   if (!colNames.has("runtime_manifest_json")) {
     await client.execute("ALTER TABLE tools ADD COLUMN runtime_manifest_json TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has("runtime_name")) {
+    await client.execute("ALTER TABLE tools ADD COLUMN runtime_name TEXT NOT NULL DEFAULT ''");
+  }
+}
+
+/** Infer `runtime_name` from legacy `/runtime/<folder>/...` entry paths and normalize stored rows. */
+async function migrateRuntimeNameBackfill(client: Client) {
+  const info = await client.execute("PRAGMA table_info(tools)");
+  const colNames = new Set(
+    info.rows.map((row) => {
+      const name = (row as { name?: string }).name;
+      return name != null ? String(name) : "";
+    })
+  );
+  if (!colNames.has("runtime_name")) return;
+
+  const res = await client.execute(
+    "SELECT id, runtime_entrypoint, runtime_manifest_json, runtime_name FROM tools"
+  );
+  for (const row of res.rows) {
+    const r = row as Record<string, unknown>;
+    if (normalizeRuntimeName(r.runtime_name)) continue;
+
+    const ep = String(r.runtime_entrypoint ?? "").trim();
+    let inferred = inferRuntimeNameFromEntryPath(ep);
+    if (!inferred) {
+      const m = parseRuntimeManifestJson(r.runtime_manifest_json);
+      if (m?.entry) inferred = inferRuntimeNameFromEntryPath(m.entry);
+    }
+    if (!inferred) continue;
+
+    const path = runtimeIndexHtmlPath(inferred);
+    await client.execute({
+      sql: `UPDATE tools SET runtime_name = ?, runtime_entrypoint = ?, runtime_manifest_json = '' WHERE id = ?`,
+      args: [inferred, path, Number(r.id)],
+    });
   }
 }
 
@@ -394,16 +445,23 @@ async function migrateFirstPartyInAppTools(client: Client) {
     const tool = normalizeToolRow(r) as Tool;
     const embed_allowed = 0;
     const embed_url = "";
+
     let runtime_supported = Number(tool.runtime_supported) ? 1 : 0;
-    let runtime_entrypoint = coerceRuntimeEntryToRelative(String(r.runtime_entrypoint ?? ""), origin) ?? "";
-    let runtime_manifest_json = String(r.runtime_manifest_json ?? "").trim();
-    const manifestParsed0 = runtime_manifest_json ? parseRuntimeManifestJson(runtime_manifest_json) : null;
-    let manifestForTool = manifestParsed0;
-    if (manifestParsed0?.entry) {
-      const ce = coerceRuntimeEntryToRelative(String(manifestParsed0.entry), origin);
-      if (ce) {
-        manifestForTool = { ...manifestParsed0, entry: ce };
-        runtime_manifest_json = JSON.stringify(manifestForTool);
+    let runtime_name = tool.runtime_name || "";
+    let runtime_entrypoint = String(tool.runtime_entrypoint ?? "").trim();
+    let runtime_manifest_json = runtime_name
+      ? ""
+      : String(r.runtime_manifest_json ?? "").trim();
+
+    let manifestForTool = tool.runtime_manifest;
+    if (!runtime_name && runtime_manifest_json) {
+      const parsed = parseRuntimeManifestJson(runtime_manifest_json);
+      if (parsed?.entry) {
+        const ce = coerceRuntimeEntryToRelative(String(parsed.entry), origin);
+        if (ce) {
+          manifestForTool = { ...parsed, entry: ce };
+          runtime_manifest_json = JSON.stringify(manifestForTool);
+        }
       }
     }
 
@@ -412,12 +470,14 @@ async function migrateFirstPartyInAppTools(client: Client) {
       embed_allowed,
       embed_url,
       runtime_supported,
+      runtime_name,
       runtime_entrypoint,
-      runtime_manifest: manifestForTool,
+      runtime_manifest: runtime_name ? defaultRuntimeManifestForName(runtime_name) : manifestForTool,
     };
 
     if (runtime_supported && !toolSupportsInAppRuntime(partialTool)) {
       runtime_supported = 0;
+      runtime_name = "";
       runtime_entrypoint = "";
       runtime_manifest_json = "";
       manifestForTool = null;
@@ -426,8 +486,9 @@ async function migrateFirstPartyInAppTools(client: Client) {
     const finalTool: Tool = {
       ...partialTool,
       runtime_supported,
+      runtime_name,
       runtime_entrypoint,
-      runtime_manifest: manifestForTool,
+      runtime_manifest: runtime_name ? defaultRuntimeManifestForName(runtime_name) : manifestForTool,
     };
 
     let delivery_mode: Tool["delivery_mode"] = tool.delivery_mode;
@@ -437,23 +498,26 @@ async function migrateFirstPartyInAppTools(client: Client) {
 
     const id = Number(tool.id);
     const jsonBefore = String(r.runtime_manifest_json ?? "").trim();
+    const prevName = String(r.runtime_name ?? "").trim().toLowerCase();
     const changed =
       prevEmbedAllowed !== 0 ||
       prevEmbedUrl !== "" ||
       prevDeliveryMode !== delivery_mode ||
       runtime_supported !== Number(r.runtime_supported ?? 0) ||
-      runtime_entrypoint !== String(r.runtime_entrypoint ?? "") ||
+      runtime_name !== prevName ||
+      runtime_entrypoint !== String(r.runtime_entrypoint ?? "").trim() ||
       runtime_manifest_json !== jsonBefore;
 
     if (!changed) continue;
 
     await client.execute({
-      sql: `UPDATE tools SET embed_allowed = ?, embed_url = ?, runtime_supported = ?, delivery_mode = ?, runtime_entrypoint = ?, runtime_manifest_json = ?, updated_at = datetime('now') WHERE id = ?`,
+      sql: `UPDATE tools SET embed_allowed = ?, embed_url = ?, runtime_supported = ?, delivery_mode = ?, runtime_name = ?, runtime_entrypoint = ?, runtime_manifest_json = ?, updated_at = datetime('now') WHERE id = ?`,
       args: [
         embed_allowed,
         embed_url,
         runtime_supported,
         delivery_mode,
+        runtime_name,
         runtime_entrypoint,
         runtime_manifest_json,
         id,
@@ -529,6 +593,7 @@ async function initSchema(client: Client) {
 
   await client.batch(schemaStatements, "write");
   await migrateToolsColumns(client);
+  await migrateRuntimeNameBackfill(client);
   await migrateToolCategoriesData(client);
   await migrateRemoveLegacyVerificationColumns(client);
   await migrateAnalyticsColumns(client);
@@ -583,6 +648,7 @@ async function seedTools(client: Client) {
       embed_allowed: 0,
       embed_url: "",
       runtime_supported: 0,
+      runtime_name: "",
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
@@ -609,6 +675,7 @@ async function seedTools(client: Client) {
       embed_allowed: 0,
       embed_url: "",
       runtime_supported: 0,
+      runtime_name: "",
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
@@ -635,6 +702,7 @@ async function seedTools(client: Client) {
       embed_allowed: 0,
       embed_url: "",
       runtime_supported: 0,
+      runtime_name: "",
       runtime_entrypoint: "",
       sandbox_level: "strict",
       trusted_domains: "github.com",
@@ -653,9 +721,9 @@ async function seedTools(client: Client) {
     sql: `INSERT OR IGNORE INTO tools (
       name, slug, description, short_description, category, categories, icon, tool_kind, delivery_mode, download_url, web_url,
       app_store_url, play_store_url,
-      embed_allowed, embed_url, runtime_supported, runtime_entrypoint, sandbox_level, trusted_domains, vendor,
+      embed_allowed, embed_url, runtime_supported, runtime_name, runtime_entrypoint, runtime_manifest_json, sandbox_level, trusted_domains, vendor,
       privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform, downloads
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       tool.name,
       tool.slug,
@@ -673,7 +741,9 @@ async function seedTools(client: Client) {
       tool.embed_allowed,
       tool.embed_url,
       tool.runtime_supported,
+      tool.runtime_name,
       tool.runtime_entrypoint,
+      "",
       tool.sandbox_level,
       tool.trusted_domains,
       tool.vendor,
@@ -728,6 +798,7 @@ interface ToolWriteInput {
   app_store_url: string;
   play_store_url: string;
   runtime_supported: number;
+  runtime_name?: string;
   runtime_entrypoint: string;
   runtime_manifest?: RuntimeManifest | null;
   sandbox_level: "strict" | "standard" | "trusted";
@@ -754,6 +825,7 @@ function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
     embed_allowed: 0,
     embed_url: "",
     runtime_supported: tool.runtime_supported ?? 0,
+    runtime_name: tool.runtime_name ?? "",
     runtime_entrypoint: tool.runtime_entrypoint ?? "",
     sandbox_level: tool.sandbox_level ?? "strict",
     trusted_domains: tool.trusted_domains ?? "",
@@ -773,9 +845,9 @@ export async function createTool(tool: ToolWriteInput) {
     `INSERT INTO tools (
       name, slug, description, short_description, category, categories, icon, tool_kind, delivery_mode, download_url, web_url,
       app_store_url, play_store_url,
-      embed_allowed, embed_url, runtime_supported, runtime_entrypoint, runtime_manifest_json, sandbox_level, trusted_domains, vendor,
+      embed_allowed, embed_url, runtime_supported, runtime_name, runtime_entrypoint, runtime_manifest_json, sandbox_level, trusted_domains, vendor,
       privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       t.name,
       t.slug,
@@ -793,6 +865,7 @@ export async function createTool(tool: ToolWriteInput) {
       t.embed_allowed,
       t.embed_url,
       t.runtime_supported,
+      t.runtime_name,
       t.runtime_entrypoint,
       runtimeManifestJson,
       t.sandbox_level,
@@ -828,6 +901,7 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       embed_allowed = ?,
       embed_url = ?,
       runtime_supported = ?,
+      runtime_name = ?,
       runtime_entrypoint = ?,
       runtime_manifest_json = ?,
       sandbox_level = ?,
@@ -857,6 +931,7 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       t.embed_allowed,
       t.embed_url,
       t.runtime_supported,
+      t.runtime_name,
       t.runtime_entrypoint,
       runtimeManifestJson,
       t.sandbox_level,

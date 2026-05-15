@@ -8,20 +8,13 @@ import { readJsonObjectBody } from "@/server/parse-json-body";
 import { enforceSameOrigin } from "@/server/same-origin";
 import { toPublicTool } from "@/server/tool-public";
 import { validateFirstPartyInApp } from "@/server/first-party-tool-validation";
-import { getServerFirstPartyOrigin } from "@/server/first-party-origin";
+import { parseToolRuntimeWrite } from "@/server/api-tool-runtime";
 import {
   isAllowedHttpUrl,
   isValidToolSlug,
-  buildRuntimeManifestFromPreset,
-  coerceRuntimeManifestPayloadForParse,
-  coerceStoredRuntimeEntry,
   normalizeCategoriesInput,
-  parseRuntimeManifestPreset,
-  parseRuntimeManifestInput,
-  normalizeTrustedDomainsInput,
   parseDataHandling,
   parseDeliveryMode,
-  parseSandboxLevel,
   parseToolKind,
 } from "@/server/validation";
 
@@ -66,41 +59,20 @@ export async function PUT(
 
   let toolKind: "download" | "web" = "download";
   if (body.tool_kind != null && String(body.tool_kind).trim() !== "") {
-    const parsed = parseToolKind(body.tool_kind);
-    if (!parsed) {
+    const parsedKind = parseToolKind(body.tool_kind);
+    if (!parsedKind) {
       return NextResponse.json(
         { error: "tool_kind must be \"download\" or \"web\"" },
         { status: 400 }
       );
     }
-    toolKind = parsed;
+    toolKind = parsedKind;
   }
 
   const downloadUrl = String(body.download_url ?? "").trim();
   const webUrl = String(body.web_url ?? "").trim();
   const appStoreUrl = String(body.app_store_url ?? "").trim();
   const playStoreUrl = String(body.play_store_url ?? "").trim();
-  const siteOrigin = getServerFirstPartyOrigin();
-  const runtimePreset = parseRuntimeManifestPreset(body.runtime_manifest_preset);
-  const presetEntry =
-    coerceStoredRuntimeEntry(body.runtime_entrypoint, siteOrigin) ||
-    coerceStoredRuntimeEntry("/runtime/main.js", siteOrigin);
-  const runtimeManifestInput =
-    coerceRuntimeManifestPayloadForParse(body.runtime_manifest, siteOrigin) ??
-    (runtimePreset
-      ? buildRuntimeManifestFromPreset(runtimePreset, {
-          entry: presetEntry,
-          trustedDomainsCsv: String(body.trusted_domains ?? ""),
-        })
-      : undefined);
-  const runtimeManifestResult = parseRuntimeManifestInput(runtimeManifestInput);
-  if (!runtimeManifestResult.ok) {
-    return NextResponse.json({ error: runtimeManifestResult.error }, { status: 400 });
-  }
-  const runtimeManifest = runtimeManifestResult.manifest;
-  const runtimeEntrypoint =
-    coerceStoredRuntimeEntry(body.runtime_entrypoint, siteOrigin) ||
-    coerceStoredRuntimeEntry(runtimeManifest?.entry, siteOrigin);
 
   if (appStoreUrl && !isAllowedHttpUrl(appStoreUrl)) {
     return NextResponse.json(
@@ -116,11 +88,6 @@ export async function PUT(
   }
 
   const hasAnyStore = isAllowedHttpUrl(appStoreUrl) || isAllowedHttpUrl(playStoreUrl);
-  const trustedResult = normalizeTrustedDomainsInput(body.trusted_domains);
-  if (!trustedResult.ok) {
-    return NextResponse.json({ error: trustedResult.error }, { status: 400 });
-  }
-  const trustedDomains = trustedResult.csv;
   const categoriesResult = normalizeCategoriesInput(body.categories);
   if (!categoriesResult.ok) {
     return NextResponse.json({ error: categoriesResult.error }, { status: 400 });
@@ -128,38 +95,39 @@ export async function PUT(
 
   let deliveryMode: "redirect" | "browserRuntime" | "download" = "download";
   if (body.delivery_mode != null && String(body.delivery_mode).trim() !== "") {
-    const parsed = parseDeliveryMode(body.delivery_mode);
-    if (!parsed) {
+    const parsedDm = parseDeliveryMode(body.delivery_mode);
+    if (!parsedDm) {
       return NextResponse.json(
         { error: "delivery_mode must be redirect, browserRuntime, or download" },
         { status: 400 }
       );
     }
-    deliveryMode = parsed;
+    deliveryMode = parsedDm;
   }
 
-  let sandboxLevel: "strict" | "standard" | "trusted" = "strict";
-  if (body.sandbox_level != null && String(body.sandbox_level).trim() !== "") {
-    const parsed = parseSandboxLevel(body.sandbox_level);
-    if (!parsed) {
-      return NextResponse.json(
-        { error: "sandbox_level must be strict, standard, or trusted" },
-        { status: 400 }
-      );
-    }
-    sandboxLevel = parsed;
+  const rt = parseToolRuntimeWrite(body, deliveryMode);
+  if (!rt.ok) {
+    return NextResponse.json({ error: rt.error }, { status: 400 });
   }
+  const {
+    runtime_supported: runtimeSupported,
+    runtime_name: runtimeName,
+    runtime_entrypoint: runtimeEntrypoint,
+    runtime_manifest: runtimeManifest,
+    sandbox_level: sandboxLevel,
+    trusted_domains: trustedDomains,
+  } = rt.value;
 
   let dataHandling: "low" | "medium" | "high" = "medium";
   if (body.data_handling != null && String(body.data_handling).trim() !== "") {
-    const parsed = parseDataHandling(body.data_handling);
-    if (!parsed) {
+    const parsedDh = parseDataHandling(body.data_handling);
+    if (!parsedDh) {
       return NextResponse.json(
         { error: "data_handling must be low, medium, or high" },
         { status: 400 }
       );
     }
-    dataHandling = parsed;
+    dataHandling = parsedDh;
   }
 
   if (toolKind === "download" && !isAllowedHttpUrl(downloadUrl) && !hasAnyStore) {
@@ -186,19 +154,11 @@ export async function PUT(
       { status: 400 }
     );
   }
-  if (deliveryMode === "browserRuntime" && runtimeEntrypoint.length < 2) {
-    return NextResponse.json(
-      { error: "browserRuntime tools require runtime_entrypoint" },
-      { status: 400 }
-    );
-  }
-  const runtimeSupported = Boolean(body.runtime_supported) || deliveryMode === "browserRuntime" || !!runtimeManifest;
 
   const firstPartyErr = validateFirstPartyInApp({
     delivery_mode: deliveryMode,
-    runtime_supported: runtimeSupported,
-    runtime_entrypoint: runtimeEntrypoint,
-    runtime_manifest: runtimeManifest,
+    runtime_supported: runtimeSupported === 1,
+    runtime_name: runtimeName,
   });
   if (firstPartyErr) {
     return NextResponse.json({ error: firstPartyErr }, { status: 400 });
@@ -233,7 +193,8 @@ export async function PUT(
       play_store_url: playStoreUrl,
       embed_allowed: 0,
       embed_url: "",
-      runtime_supported: runtimeSupported ? 1 : 0,
+      runtime_supported: runtimeSupported,
+      runtime_name: runtimeName,
       runtime_entrypoint: runtimeEntrypoint,
       runtime_manifest: runtimeManifest,
       sandbox_level: sandboxLevel,

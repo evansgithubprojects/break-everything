@@ -81,6 +81,8 @@ export default async function ToolDetailPage({
 
   const platformBadges = tool.platform.split(",").map((p) => p.trim());
   const githubUrl = String(tool.github_url ?? "").trim();
+  const isBrowserRuntime = tool.delivery_mode === "browserRuntime";
+  const isRuntimeTool = isBrowserRuntime || Number(tool.runtime_supported) > 0;
   const categories =
     Array.isArray(tool.categories) && tool.categories.length > 0
       ? tool.categories
@@ -124,6 +126,24 @@ export default async function ToolDetailPage({
                 name={tool.name}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-none text-xs font-semibold border-2 border-accent-lime/35 bg-accent-lime/10 text-accent-lime hover:bg-accent-lime/15 transition-colors"
               />
+              {isRuntimeTool ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-semibold border-2 border-accent-amber/40 bg-accent-amber/10 text-accent-amber tracking-wide"
+                  title={`Hosted and reviewed on ${SITE_NAME}`}
+                >
+                  <svg
+                    className="w-3.5 h-3.5 shrink-0 opacity-95"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                    />
+                  </svg>
+                  by {SITE_NAME}
+                </span>
+              ) : null}
             </div>
             <p className="text-foreground/50 mt-2">{tool.short_description}</p>
           </div>
@@ -185,18 +205,20 @@ export default async function ToolDetailPage({
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground/50">Last reviewed</span>
-                  <span className="text-sm text-foreground">
-                    {tool.last_reviewed_at
-                      ? new Date(tool.last_reviewed_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "Not set"}
-                  </span>
-                </div>
+                {!isBrowserRuntime ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-foreground/50">Last reviewed</span>
+                    <span className="text-sm text-foreground">
+                      {tool.last_reviewed_at
+                        ? new Date(tool.last_reviewed_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "Not set"}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-foreground/50">Added</span>
                   <span className="text-sm text-foreground/60">
@@ -210,8 +232,7 @@ export default async function ToolDetailPage({
               </div>
             </div>
 
-            {/* Project page */}
-            {githubUrl ? (
+            {!isBrowserRuntime && githubUrl ? (
               <a
                 href={githubUrl}
                 target="_blank"
@@ -234,7 +255,7 @@ export default async function ToolDetailPage({
                   Learn more, ask questions, or get updates from the people who maintain this tool.
                 </p>
               </a>
-            ) : (
+            ) : !isBrowserRuntime ? (
               <div className="glass-card p-6 border border-card-border/80">
                 <h3 className="text-sm font-semibold text-foreground/75 mb-2">Public project page unavailable</h3>
                 <p className="text-xs text-foreground/45 leading-relaxed">
@@ -242,7 +263,7 @@ export default async function ToolDetailPage({
                   whenever possible and will add one if it becomes available.
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

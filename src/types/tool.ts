@@ -28,6 +28,8 @@ export interface Tool {
   embed_allowed: number;
   embed_url: string;
   runtime_supported: number;
+  /** Folder under `public/runtime/<runtime_name>/index.html`; canonical runtime shell. */
+  runtime_name: string;
   runtime_entrypoint: string;
   /** Optional runtime contract (pending DB persistence rollout). */
   runtime_manifest?: RuntimeManifest | null;

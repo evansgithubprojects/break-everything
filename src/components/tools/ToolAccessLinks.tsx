@@ -49,6 +49,7 @@ interface ToolAccessLinksProps {
 }
 
 export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps) {
+  const isBrowserRuntime = tool.delivery_mode === "browserRuntime";
   const githubUrl = String(tool.github_url ?? "").trim();
   const stores = resolveMobileStoreLinks(tool);
   const hasStores = Boolean(stores.apple || stores.play);
@@ -81,22 +82,23 @@ export default function ToolAccessLinks({ tool, variant }: ToolAccessLinksProps)
     <ToolShareLink tool={tool} className={githubClass} shortLabel={!isHero} />
   );
 
-  const projectLink = githubUrl ? (
-    <a
-      href={githubUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={githubClass}
-      onClick={(e) => {
-        isolateActionInteraction(e);
-        void track("source");
-      }}
-      onPointerDownCapture={isolateActionInteraction}
-    >
-      {githubIcon}
-      {isHero ? "Source page" : "Source"}
-    </a>
-  ) : null;
+  const projectLink =
+    !isBrowserRuntime && githubUrl ? (
+      <a
+        href={githubUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={githubClass}
+        onClick={(e) => {
+          isolateActionInteraction(e);
+          void track("source");
+        }}
+        onPointerDownCapture={isolateActionInteraction}
+      >
+        {githubIcon}
+        {isHero ? "Source page" : "Source"}
+      </a>
+    ) : null;
 
   const storeBlocks = hasStores ? (
     <>

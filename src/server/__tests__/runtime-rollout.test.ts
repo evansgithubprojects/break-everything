@@ -1,12 +1,16 @@
 import type { Tool } from "@/types";
 import { resolveRuntimeRollout } from "@/server/runtime-rollout";
 
-type RolloutTool = Pick<Tool, "slug" | "runtime_supported" | "runtime_entrypoint" | "runtime_manifest">;
+type RolloutTool = Pick<
+  Tool,
+  "slug" | "runtime_supported" | "runtime_name" | "runtime_entrypoint" | "runtime_manifest"
+>;
 
 function t(overrides: Partial<RolloutTool> = {}): RolloutTool {
   return {
     slug: "runtime-tool",
     runtime_supported: 1,
+    runtime_name: "tool",
     runtime_entrypoint: "/runtime/tool/index.html",
     runtime_manifest: null,
     ...overrides,
@@ -47,7 +51,7 @@ describe("resolveRuntimeRollout", () => {
   it("disallows runtime when entry is not under /runtime", () => {
     const env = { NEXT_PUBLIC_RUNTIME_BETA: "1" };
     const result = resolveRuntimeRollout(
-      t({ runtime_entrypoint: "/apps/bad.js", runtime_manifest: null }),
+      t({ runtime_name: "", runtime_entrypoint: "/apps/bad.js", runtime_manifest: null }),
       env
     );
     expect(result.enabled).toBe(false);

@@ -4,13 +4,7 @@ import { toolSupportsInAppRuntime } from "@/lib/first-party-inapp";
 
 
 
-type RuntimeRolloutTool = Pick<
-
-  Tool,
-
-  "slug" | "runtime_supported" | "runtime_entrypoint" | "runtime_manifest"
-
->;
+type RuntimeRolloutTool = Pick<Tool, "slug" | "runtime_supported" | "runtime_name" | "runtime_entrypoint" | "runtime_manifest">;
 
 
 

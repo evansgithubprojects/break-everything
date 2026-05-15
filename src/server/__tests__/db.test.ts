@@ -280,6 +280,7 @@ describe("Tools CRUD", () => {
         embed_allowed: 0,
         embed_url: "",
         runtime_supported: 0,
+        runtime_name: "",
         runtime_entrypoint: "",
         sandbox_level: "strict",
         trusted_domains: "",

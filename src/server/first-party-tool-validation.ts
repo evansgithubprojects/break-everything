@@ -1,31 +1,24 @@
-import type { RuntimeManifest } from "@/types";
 import { isValidRuntimeEntryPath } from "@/lib/first-party-inapp";
+import { normalizeRuntimeName, runtimeIndexHtmlPath } from "@/lib/runtime-name";
 
 export type FirstPartyToolPayload = {
   delivery_mode: "redirect" | "browserRuntime" | "download";
   runtime_supported: boolean;
-  runtime_entrypoint: string;
-  runtime_manifest: RuntimeManifest | null;
+  runtime_name: string;
 };
 
 /**
- * Validates `/runtime` browser runtime path rules. Returns an error message or null.
+ * Validates `/runtime/<name>/index.html` browser runtime rules. Returns an error message or null.
  */
 export function validateFirstPartyInApp(payload: FirstPartyToolPayload): string | null {
   if (payload.runtime_supported || payload.delivery_mode === "browserRuntime") {
-    const entries: string[] = [];
-    const rp = String(payload.runtime_entrypoint ?? "").trim();
-    if (rp) entries.push(rp);
-    const me = payload.runtime_manifest?.entry;
-    if (typeof me === "string" && me.trim()) entries.push(me.trim());
-    const unique = [...new Set(entries)];
-    if (unique.length === 0) {
-      return "runtime requires runtime_entrypoint or runtime_manifest.entry under /runtime";
+    const name = normalizeRuntimeName(payload.runtime_name);
+    if (!name) {
+      return "runtime requires a valid runtime_name (folder under public/runtime, loaded as /runtime/<name>/index.html)";
     }
-    for (const e of unique) {
-      if (!isValidRuntimeEntryPath(e)) {
-        return "runtime entries must be relative paths under /runtime only (same-origin tooling)";
-      }
+    const path = runtimeIndexHtmlPath(name);
+    if (!isValidRuntimeEntryPath(path)) {
+      return "runtime_name resolves to an invalid /runtime path";
     }
   }
 

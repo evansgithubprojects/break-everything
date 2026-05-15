@@ -104,7 +104,13 @@ export function getPublicSiteOrigin(): string {
   }
 }
 
-export function getEffectiveRuntimeEntryStrings(tool: Pick<Tool, "runtime_entrypoint" | "runtime_manifest">): string[] {
+import { normalizeRuntimeName, runtimeIndexHtmlPath } from "@/lib/runtime-name";
+
+export function getEffectiveRuntimeEntryStrings(
+  tool: Pick<Tool, "runtime_name" | "runtime_entrypoint" | "runtime_manifest">
+): string[] {
+  const name = normalizeRuntimeName(tool.runtime_name);
+  if (name) return [runtimeIndexHtmlPath(name)];
   const out: string[] = [];
   const legacy = String(tool.runtime_entrypoint ?? "").trim();
   if (legacy) out.push(legacy);
@@ -114,7 +120,7 @@ export function getEffectiveRuntimeEntryStrings(tool: Pick<Tool, "runtime_entryp
 }
 
 export function toolSupportsInAppRuntime(
-  tool: Pick<Tool, "runtime_supported" | "runtime_entrypoint" | "runtime_manifest">
+  tool: Pick<Tool, "runtime_supported" | "runtime_name" | "runtime_entrypoint" | "runtime_manifest">
 ): boolean {
   if (!Number(tool.runtime_supported)) return false;
   const entries = getEffectiveRuntimeEntryStrings(tool);
