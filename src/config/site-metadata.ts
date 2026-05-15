@@ -18,7 +18,7 @@ export const DEFAULT_OG_IMAGE = {
   type: "image/png",
 } as const;
 
-/** `google-adsense-account` meta value — use only on home and tool detail routes. */
+/** `google-adsense-account` meta — emit only from `/tools/[slug]/run` metadata (no other routes). */
 export const GOOGLE_ADSENSE_ACCOUNT = "ca-pub-2587197324811876";
 
 /** External Jira form used for community tool requests. Replace placeholder before shipping. */

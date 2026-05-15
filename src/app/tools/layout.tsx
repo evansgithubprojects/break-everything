@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
-  GOOGLE_ADSENSE_ACCOUNT,
   SITE_NAME,
 } from "@/config";
 
@@ -34,9 +33,6 @@ export const metadata: Metadata = {
         height: DEFAULT_OG_IMAGE.height,
       },
     ],
-  },
-  other: {
-    "google-adsense-account": GOOGLE_ADSENSE_ACCOUNT,
   },
 };
 

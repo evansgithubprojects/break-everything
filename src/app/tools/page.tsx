@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import BounceInsightTracker from "@/components/analytics/BounceInsightTracker";
 import ToolCard from "@/components/tools/ToolCard";
 import { useFavorites } from "@/components/tools/useFavorites";
 import type { Tool } from "@/types";
+
+const BounceInsightTracker = dynamic(
+  () => import("@/components/analytics/BounceInsightTracker"),
+  { ssr: false }
+);
 
 export default function ToolsPage() {
   const [tools, setTools] = useState<Tool[]>([]);

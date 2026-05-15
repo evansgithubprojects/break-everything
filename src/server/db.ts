@@ -9,7 +9,10 @@ import {
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-import type { AnalyticsSummary } from "@/types";
+import type { AnalyticsSummary, RuntimeManifest, Tool } from "@/types";
+import { coerceRuntimeEntryToRelative, toolSupportsInAppRuntime } from "@/lib/first-party-inapp";
+import { getServerFirstPartyOrigin } from "@/server/first-party-origin";
+import { isAllowedHttpUrl, parseRuntimeManifestInput } from "@/server/validation";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -162,14 +165,47 @@ function primaryCategoryFrom(categories: string[]): string {
   return categories[0] ?? "";
 }
 
-function normalizeToolRowCategories<T extends Record<string, unknown>>(row: T): T {
+function parseRuntimeManifestJson(value: unknown): RuntimeManifest | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = JSON.parse(value);
+    const validated = parseRuntimeManifestInput(parsed);
+    return validated.ok ? validated.manifest : null;
+  } catch {
+    return null;
+  }
+}
+
+function fallbackRuntimeManifestFromLegacy(row: Record<string, unknown>): RuntimeManifest | null {
+  const runtimeSupported = Number(row.runtime_supported ?? 0) > 0;
+  const runtimeEntrypoint =
+    typeof row.runtime_entrypoint === "string" ? row.runtime_entrypoint.trim() : "";
+  if (!runtimeSupported || !runtimeEntrypoint) return null;
+  return {
+    version: 1,
+    entry: runtimeEntrypoint,
+    executionMode: "iframe",
+    permissions: {},
+    allowedOrigins: [],
+    storagePolicy: "session",
+    capabilities: [],
+  };
+}
+
+function normalizeToolRow<T extends Record<string, unknown>>(row: T): T {
   const categories = parseCategoriesValue(row.categories);
   const fallbackCategory = typeof row.category === "string" ? row.category.trim() : "";
   const resolved = categories.length > 0 ? categories : fallbackCategory ? [fallbackCategory] : [];
+  const runtimeManifest =
+    parseRuntimeManifestJson(row.runtime_manifest_json) ?? fallbackRuntimeManifestFromLegacy(row);
   return {
     ...row,
     categories: resolved,
     category: primaryCategoryFrom(resolved),
+    runtime_manifest: runtimeManifest,
+    delivery_mode: normalizeDeliveryMode(row),
+    embed_allowed: 0,
+    embed_url: "",
   };
 }
 
@@ -239,6 +275,9 @@ async function migrateToolsColumns(client: Client) {
   if (!colNames.has("categories")) {
     await client.execute("ALTER TABLE tools ADD COLUMN categories TEXT NOT NULL DEFAULT '[]'");
   }
+  if (!colNames.has("runtime_manifest_json")) {
+    await client.execute("ALTER TABLE tools ADD COLUMN runtime_manifest_json TEXT NOT NULL DEFAULT ''");
+  }
 }
 
 /** Legacy columns removed from the product; drop on existing databases (SQLite 3.35+). */
@@ -284,6 +323,145 @@ async function migrateToolCategoriesData(client: Client) {
   }
 }
 
+async function migrateAnalyticsColumns(client: Client) {
+  const info = await client.execute("PRAGMA table_info(analytics_events)");
+  const colNames = new Set(
+    info.rows.map((row) => {
+      const name = (row as { name?: string }).name;
+      return name != null ? String(name) : "";
+    })
+  );
+  if (!colNames.has("utm_source")) {
+    await client.execute("ALTER TABLE analytics_events ADD COLUMN utm_source TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has("utm_medium")) {
+    await client.execute("ALTER TABLE analytics_events ADD COLUMN utm_medium TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has("utm_campaign")) {
+    await client.execute("ALTER TABLE analytics_events ADD COLUMN utm_campaign TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has("utm_term")) {
+    await client.execute("ALTER TABLE analytics_events ADD COLUMN utm_term TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has("utm_content")) {
+    await client.execute("ALTER TABLE analytics_events ADD COLUMN utm_content TEXT NOT NULL DEFAULT ''");
+  }
+}
+
+function pickFallbackDeliveryMode(
+  tool: Pick<Tool, "web_url" | "download_url" | "app_store_url" | "play_store_url">
+): "redirect" | "download" {
+  const w = String(tool.web_url ?? "").trim();
+  const d = String(tool.download_url ?? "").trim();
+  const a = String(tool.app_store_url ?? "").trim();
+  const p = String(tool.play_store_url ?? "").trim();
+  if (
+    isAllowedHttpUrl(w) ||
+    isAllowedHttpUrl(d) ||
+    isAllowedHttpUrl(a) ||
+    isAllowedHttpUrl(p)
+  ) {
+    return "redirect";
+  }
+  return "download";
+}
+
+function normalizeDeliveryMode(row: Record<string, unknown>): Tool["delivery_mode"] {
+  const dm = String(row.delivery_mode ?? "download");
+  if (dm === "redirect" || dm === "browserRuntime" || dm === "download") {
+    return dm;
+  }
+  if (dm === "embedded") {
+    return pickFallbackDeliveryMode({
+      web_url: String(row.web_url ?? ""),
+      download_url: String(row.download_url ?? ""),
+      app_store_url: String(row.app_store_url ?? ""),
+      play_store_url: String(row.play_store_url ?? ""),
+    });
+  }
+  return "download";
+}
+
+/** Strict migration: strip legacy embed surfacing + invalid `/runtime` flags (first-party + `/runtime` only). */
+async function migrateFirstPartyInAppTools(client: Client) {
+  const origin = getServerFirstPartyOrigin();
+  const res = await client.execute("SELECT * FROM tools");
+  for (const row of res.rows) {
+    const r = row as Record<string, unknown>;
+    const prevEmbedAllowed = Number(r.embed_allowed ?? 0);
+    const prevEmbedUrl = String(r.embed_url ?? "").trim();
+    const prevDeliveryMode = String(r.delivery_mode ?? "download");
+    const tool = normalizeToolRow(r) as Tool;
+    const embed_allowed = 0;
+    const embed_url = "";
+    let runtime_supported = Number(tool.runtime_supported) ? 1 : 0;
+    let runtime_entrypoint = coerceRuntimeEntryToRelative(String(r.runtime_entrypoint ?? ""), origin) ?? "";
+    let runtime_manifest_json = String(r.runtime_manifest_json ?? "").trim();
+    const manifestParsed0 = runtime_manifest_json ? parseRuntimeManifestJson(runtime_manifest_json) : null;
+    let manifestForTool = manifestParsed0;
+    if (manifestParsed0?.entry) {
+      const ce = coerceRuntimeEntryToRelative(String(manifestParsed0.entry), origin);
+      if (ce) {
+        manifestForTool = { ...manifestParsed0, entry: ce };
+        runtime_manifest_json = JSON.stringify(manifestForTool);
+      }
+    }
+
+    const partialTool: Tool = {
+      ...tool,
+      embed_allowed,
+      embed_url,
+      runtime_supported,
+      runtime_entrypoint,
+      runtime_manifest: manifestForTool,
+    };
+
+    if (runtime_supported && !toolSupportsInAppRuntime(partialTool)) {
+      runtime_supported = 0;
+      runtime_entrypoint = "";
+      runtime_manifest_json = "";
+      manifestForTool = null;
+    }
+
+    const finalTool: Tool = {
+      ...partialTool,
+      runtime_supported,
+      runtime_entrypoint,
+      runtime_manifest: manifestForTool,
+    };
+
+    let delivery_mode: Tool["delivery_mode"] = tool.delivery_mode;
+    if (delivery_mode === "browserRuntime" && !toolSupportsInAppRuntime(finalTool)) {
+      delivery_mode = pickFallbackDeliveryMode(finalTool);
+    }
+
+    const id = Number(tool.id);
+    const jsonBefore = String(r.runtime_manifest_json ?? "").trim();
+    const changed =
+      prevEmbedAllowed !== 0 ||
+      prevEmbedUrl !== "" ||
+      prevDeliveryMode !== delivery_mode ||
+      runtime_supported !== Number(r.runtime_supported ?? 0) ||
+      runtime_entrypoint !== String(r.runtime_entrypoint ?? "") ||
+      runtime_manifest_json !== jsonBefore;
+
+    if (!changed) continue;
+
+    await client.execute({
+      sql: `UPDATE tools SET embed_allowed = ?, embed_url = ?, runtime_supported = ?, delivery_mode = ?, runtime_entrypoint = ?, runtime_manifest_json = ?, updated_at = datetime('now') WHERE id = ?`,
+      args: [
+        embed_allowed,
+        embed_url,
+        runtime_supported,
+        delivery_mode,
+        runtime_entrypoint,
+        runtime_manifest_json,
+        id,
+      ],
+    });
+  }
+}
+
 async function initSchema(client: Client) {
   const schemaStatements: InStatement[] = [
     {
@@ -306,6 +484,7 @@ async function initSchema(client: Client) {
         embed_url TEXT NOT NULL DEFAULT '',
         runtime_supported INTEGER NOT NULL DEFAULT 0,
         runtime_entrypoint TEXT NOT NULL DEFAULT '',
+        runtime_manifest_json TEXT NOT NULL DEFAULT '',
         sandbox_level TEXT NOT NULL DEFAULT 'strict' CHECK (sandbox_level IN ('strict', 'standard', 'trusted')),
         trusted_domains TEXT NOT NULL DEFAULT '',
         vendor TEXT NOT NULL DEFAULT '',
@@ -332,6 +511,11 @@ async function initSchema(client: Client) {
         event TEXT NOT NULL,
         slug TEXT NOT NULL,
         action TEXT NOT NULL DEFAULT '',
+        utm_source TEXT NOT NULL DEFAULT '',
+        utm_medium TEXT NOT NULL DEFAULT '',
+        utm_campaign TEXT NOT NULL DEFAULT '',
+        utm_term TEXT NOT NULL DEFAULT '',
+        utm_content TEXT NOT NULL DEFAULT '',
         created_at TEXT DEFAULT (datetime('now'))
       );`,
     },
@@ -347,6 +531,8 @@ async function initSchema(client: Client) {
   await migrateToolsColumns(client);
   await migrateToolCategoriesData(client);
   await migrateRemoveLegacyVerificationColumns(client);
+  await migrateAnalyticsColumns(client);
+  await migrateFirstPartyInAppTools(client);
 
   if (!ADMIN_PASSWORD) {
     throw new Error("Missing ADMIN_PASSWORD environment variable.");
@@ -506,19 +692,19 @@ async function seedTools(client: Client) {
 
 export async function getAllTools() {
   const rows = await queryAll<Record<string, unknown>>("SELECT * FROM tools ORDER BY downloads DESC");
-  return rows.map(normalizeToolRowCategories);
+  return rows.map(normalizeToolRow);
 }
 
 export async function getToolBySlug(slug: string) {
   const row = await queryOne<Record<string, unknown>>("SELECT * FROM tools WHERE slug = ?", [slug]);
-  return row ? normalizeToolRowCategories(row) : undefined;
+  return row ? normalizeToolRow(row) : undefined;
 }
 
 export async function getToolsByCategory(category: string) {
   const rows = await queryAll<Record<string, unknown>>("SELECT * FROM tools ORDER BY downloads DESC");
   const target = category.trim().toLowerCase();
   return rows
-    .map(normalizeToolRowCategories)
+    .map(normalizeToolRow)
     .filter(
       (row) =>
         Array.isArray(row.categories) &&
@@ -534,7 +720,7 @@ interface ToolWriteInput {
   categories: string[];
   icon: string;
   tool_kind: "download" | "web";
-  delivery_mode: "redirect" | "embedded" | "browserRuntime" | "download";
+  delivery_mode: Tool["delivery_mode"];
   download_url: string;
   web_url: string;
   embed_allowed: number;
@@ -543,6 +729,7 @@ interface ToolWriteInput {
   play_store_url: string;
   runtime_supported: number;
   runtime_entrypoint: string;
+  runtime_manifest?: RuntimeManifest | null;
   sandbox_level: "strict" | "standard" | "trusted";
   trusted_domains: string;
   vendor: string;
@@ -564,8 +751,8 @@ function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
     web_url: tool.web_url ?? "",
     app_store_url: tool.app_store_url ?? "",
     play_store_url: tool.play_store_url ?? "",
-    embed_allowed: tool.embed_allowed ?? 0,
-    embed_url: tool.embed_url ?? "",
+    embed_allowed: 0,
+    embed_url: "",
     runtime_supported: tool.runtime_supported ?? 0,
     runtime_entrypoint: tool.runtime_entrypoint ?? "",
     sandbox_level: tool.sandbox_level ?? "strict",
@@ -581,13 +768,14 @@ function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
 
 export async function createTool(tool: ToolWriteInput) {
   const t = withToolDefaults(tool);
+  const runtimeManifestJson = t.runtime_manifest ? JSON.stringify(t.runtime_manifest) : "";
   return execute(
     `INSERT INTO tools (
       name, slug, description, short_description, category, categories, icon, tool_kind, delivery_mode, download_url, web_url,
       app_store_url, play_store_url,
-      embed_allowed, embed_url, runtime_supported, runtime_entrypoint, sandbox_level, trusted_domains, vendor,
+      embed_allowed, embed_url, runtime_supported, runtime_entrypoint, runtime_manifest_json, sandbox_level, trusted_domains, vendor,
       privacy_summary, data_handling, review_notes, last_reviewed_at, github_url, platform
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       t.name,
       t.slug,
@@ -606,6 +794,7 @@ export async function createTool(tool: ToolWriteInput) {
       t.embed_url,
       t.runtime_supported,
       t.runtime_entrypoint,
+      runtimeManifestJson,
       t.sandbox_level,
       t.trusted_domains,
       t.vendor,
@@ -621,6 +810,7 @@ export async function createTool(tool: ToolWriteInput) {
 
 export async function updateTool(slug: string, tool: ToolWriteInput) {
   const t = withToolDefaults(tool);
+  const runtimeManifestJson = t.runtime_manifest ? JSON.stringify(t.runtime_manifest) : "";
   return execute(
     `UPDATE tools SET
       name = ?,
@@ -639,6 +829,7 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       embed_url = ?,
       runtime_supported = ?,
       runtime_entrypoint = ?,
+      runtime_manifest_json = ?,
       sandbox_level = ?,
       trusted_domains = ?,
       vendor = ?,
@@ -667,6 +858,7 @@ export async function updateTool(slug: string, tool: ToolWriteInput) {
       t.embed_url,
       t.runtime_supported,
       t.runtime_entrypoint,
+      runtimeManifestJson,
       t.sandbox_level,
       t.trusted_domains,
       t.vendor,
@@ -751,10 +943,26 @@ export async function recordAnalyticsEvent(input: {
   event: string;
   slug: string;
   action: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
 }): Promise<void> {
   await execute(
-    "INSERT INTO analytics_events (event, slug, action) VALUES (?, ?, ?)",
-    [input.event, input.slug, input.action]
+    `INSERT INTO analytics_events (
+      event, slug, action, utm_source, utm_medium, utm_campaign, utm_term, utm_content
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      input.event,
+      input.slug,
+      input.action,
+      input.utm_source ?? "",
+      input.utm_medium ?? "",
+      input.utm_campaign ?? "",
+      input.utm_term ?? "",
+      input.utm_content ?? "",
+    ]
   );
 }
 
@@ -841,11 +1049,41 @@ export async function getAnalyticsSummary(
     count: Number(r.count),
   }));
 
+  const runtimeLifecycleEvents = byEvent
+    .filter((row) => row.event.startsWith("runtime_"))
+    .map((row) => ({
+      event: row.event,
+      count: row.count,
+    }));
+  const runtimeErrorCount = runtimeLifecycleEvents
+    .filter((row) => row.event === "runtime_error")
+    .reduce((total, row) => total + row.count, 0);
+  const runtimeStartCount = runtimeLifecycleEvents
+    .filter((row) => row.event === "runtime_start")
+    .reduce((total, row) => total + row.count, 0);
+  const runtimeFailureRate = runtimeStartCount > 0 ? runtimeErrorCount / runtimeStartCount : 0;
+
+  const byUtmCampaignRows = await queryAll<{ utm_campaign: string; count: number | string }>(
+    `SELECT utm_campaign, COUNT(*) as count
+     FROM analytics_events
+     WHERE ${baseWhere} AND TRIM(COALESCE(utm_campaign, '')) != ''
+     GROUP BY utm_campaign
+     ORDER BY count DESC`,
+    baseArgs
+  );
+  const byUtmCampaign = byUtmCampaignRows.map((r) => ({
+    campaign: r.utm_campaign,
+    count: Number(r.count),
+  }));
+
   return {
     range: { since: since.toISOString(), until: untilIso },
     totals: { all, byEvent },
     uniqueSlugs,
     toolActionClicks,
+    runtimeLifecycleEvents,
+    runtimeFailureRate,
+    byUtmCampaign,
     byDay,
     topTools,
     byAction,

@@ -8,6 +8,8 @@ This project follows Next.js App Router conventions and keeps server-only module
 src/
 |-- analytics/              # Client-only helpers (browser → /api/events)
 |   |-- client.ts
+|   |-- campus-attribution.ts
+|   |-- useCampusAttribution.ts
 |   `-- index.ts
 |-- app/                    # Routes, layouts, pages, API handlers
 |   |-- admin/              # Admin dashboard (+ layout metadata)
@@ -18,16 +20,17 @@ src/
 |   |   |-- auth/
 |   |   |-- events/         # POST /api/events (analytics ingest)
 |   |   `-- tools/
-|   |-- tools/              # Browse, [slug] detail, embed, run
+|   |-- tools/              # Browse, [slug] detail, run
 |   |-- globals.css
 |   |-- icon.png / apple-icon.png / favicon.ico
 |   `-- layout.tsx
 |-- components/
 |   |-- admin/              # AdminAnalyticsPanel
+|   |-- analytics/          # Bounce/engagement trackers
 |   |-- forms/
 |   |-- layout/
-|   |-- tools/              # Cards, trust, delivery, share, mobile store
-|   `-- index.ts            # Namespaced barrels (Admin, Forms, Layout, Tools)
+|   |-- runtime/            # ToolRuntimeHost boundary + runtime boot/error UX
+|   `-- tools/              # Cards, trust, delivery, share, mobile store
 |-- config/                 # App-wide constants (SEO, site name, AdSense id)
 |   |-- site-metadata.ts
 |   `-- index.ts
@@ -38,14 +41,15 @@ src/
 |   |-- db.ts
 |   |-- parse-json-body.ts
 |   |-- rate-limit.ts
+|   |-- runtime-policy.ts
+|   |-- runtime-rollout.ts
 |   |-- tool-public.ts      # Public tool field shaping
 |   |-- validation.ts
-|   |-- __tests__/
-|   `-- index.ts
+|   `-- __tests__/
 |-- types/
 |   |-- analytics.ts
+|   |-- runtime.ts
 |   |-- tool.ts
-|   |-- tool-request.ts
 |   `-- index.ts
 `-- test-env.ts             # Jest setup (see jest.config.ts)
 
@@ -64,6 +68,16 @@ data/
 | Shared summary type | `src/types/analytics.ts` |
 | Browser tracking helper | `src/analytics/client.ts` (`@/analytics`) |
 | Admin UI | `src/components/admin/AdminAnalyticsPanel.tsx` |
+
+## Runtime Hosting (where things live)
+
+| Concern | Location |
+|--------|-----------|
+| Runtime route page / rollout gating | `src/app/tools/[slug]/run/page.tsx` |
+| Runtime rollout + kill switch controls | `src/server/runtime-rollout.ts` |
+| Runtime contract type | `src/types/runtime.ts` |
+| Manifest validation + presets | `src/server/validation.ts` |
+| Runtime analytics ingest allowlist | `src/server/analytics-ingest.ts` |
 
 ## Conventions
 

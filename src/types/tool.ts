@@ -1,5 +1,7 @@
+import type { RuntimeManifest } from "./runtime";
+
 export type ToolKind = "download" | "web";
-export type ToolDeliveryMode = "redirect" | "embedded" | "browserRuntime" | "download";
+export type ToolDeliveryMode = "redirect" | "browserRuntime" | "download";
 export type ToolSandboxLevel = "strict" | "standard" | "trusted";
 export type ToolDataHandling = "low" | "medium" | "high";
 
@@ -27,6 +29,8 @@ export interface Tool {
   embed_url: string;
   runtime_supported: number;
   runtime_entrypoint: string;
+  /** Optional runtime contract (pending DB persistence rollout). */
+  runtime_manifest?: RuntimeManifest | null;
   sandbox_level: ToolSandboxLevel;
   trusted_domains: string;
   vendor: string;

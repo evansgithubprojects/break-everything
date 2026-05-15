@@ -1,7 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import type { Tool, ToolKind } from "@/types";
+import { type ReactNode, useMemo, useState } from "react";
+import type { RuntimeManifest, Tool, ToolDeliveryMode, ToolKind } from "@/types";
+
+function CollapsibleSection({
+  title,
+  subtitle,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(Boolean(defaultOpen));
+
+  return (
+    <details
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+      className="rounded-xl border border-card-border bg-white/[0.02] group [&_summary::-webkit-details-marker]:hidden"
+    >
+      <summary className="cursor-pointer px-4 py-3 flex items-start justify-between gap-4 rounded-xl hover:bg-white/[0.04] list-none marker:content-none transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-amber/40">
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium text-foreground block">{title}</span>
+          {subtitle ? (
+            <span className="text-xs text-foreground/45 mt-0.5 block leading-relaxed">{subtitle}</span>
+          ) : null}
+        </div>
+        <span
+          aria-hidden
+          className="shrink-0 text-foreground/40 text-xs transition-transform group-open:-rotate-180 mt-1"
+        >
+          ▾
+        </span>
+      </summary>
+      <div className="border-t border-card-border px-4 py-5 space-y-5">{children}</div>
+    </details>
+  );
+}
 
 interface AdminToolFormProps {
   tool?: Tool | null;
@@ -9,10 +47,69 @@ interface AdminToolFormProps {
   onCancel: () => void;
 }
 
+type RuntimePreset = "none" | "localOnly" | "networkedUtility" | "trustedEmbeddedApp";
+
+const RUNTIME_PRESET_LABELS: Record<Exclude<RuntimePreset, "none">, string> = {
+  localOnly: "Local-only utility (no network)",
+  networkedUtility: "Networked utility (session storage)",
+  trustedEmbeddedApp: "Trusted app (full iframe runtime preset)",
+};
+
+function presetManifest(preset: Exclude<RuntimePreset, "none">, entry: string): RuntimeManifest {
+  const normalizedEntry = entry.trim() || "/runtime/main.js";
+  if (preset === "localOnly") {
+    return {
+      version: 1,
+      entry: normalizedEntry,
+      executionMode: "module",
+      permissions: { network: false, storage: true, clipboard: false, downloads: false, popups: false },
+      allowedOrigins: [],
+      storagePolicy: "session",
+      capabilities: ["fileOpen", "fileSave"],
+    };
+  }
+  if (preset === "networkedUtility") {
+    return {
+      version: 1,
+      entry: normalizedEntry,
+      executionMode: "module",
+      permissions: { network: true, storage: true, clipboard: true, downloads: true, popups: false },
+      allowedOrigins: [],
+      storagePolicy: "session",
+      capabilities: ["fileOpen", "fileSave", "copyToClipboard", "share"],
+    };
+  }
+  return {
+    version: 1,
+    entry: normalizedEntry,
+    executionMode: "iframe",
+    permissions: { network: true, storage: true, clipboard: true, downloads: true, popups: true },
+    allowedOrigins: [],
+    storagePolicy: "persistent",
+    capabilities: ["openExternal", "share", "copyToClipboard"],
+  };
+}
+
+function inferManifestFromTool(tool?: Tool | null): RuntimeManifest | null {
+  if (!tool) return null;
+  if (tool.runtime_manifest) return tool.runtime_manifest;
+  if (!tool.runtime_supported && !tool.runtime_entrypoint) return null;
+  return {
+    version: 1,
+    entry: tool.runtime_entrypoint || "/runtime/main.js",
+    executionMode: "module",
+    permissions: { network: false, storage: true, clipboard: false, downloads: false, popups: false },
+    allowedOrigins: [],
+    storagePolicy: "session",
+    capabilities: ["fileOpen", "fileSave"],
+  };
+}
+
 function buildInitialForm(tool?: Tool | null) {
   const initialCategories = tool?.categories?.length
     ? tool.categories.join(", ")
     : tool?.category ?? "";
+  const initialManifest = inferManifestFromTool(tool);
   if (tool) {
     const kind: ToolKind = tool.tool_kind === "web" ? "web" : "download";
     return {
@@ -26,10 +123,10 @@ function buildInitialForm(tool?: Tool | null) {
       delivery_mode: tool.delivery_mode || "download",
       download_url: tool.download_url || "",
       web_url: tool.web_url || "",
-      embed_allowed: Boolean(tool.embed_allowed),
-      embed_url: tool.embed_url || "",
       runtime_supported: Boolean(tool.runtime_supported),
       runtime_entrypoint: tool.runtime_entrypoint || "",
+      runtime_manifest_preset: "none" as RuntimePreset,
+      runtime_manifest_text: initialManifest ? JSON.stringify(initialManifest, null, 2) : "",
       sandbox_level: tool.sandbox_level || "strict",
       trusted_domains: tool.trusted_domains || "",
       vendor: tool.vendor || "",
@@ -54,10 +151,10 @@ function buildInitialForm(tool?: Tool | null) {
     delivery_mode: "download",
     download_url: "",
     web_url: "",
-    embed_allowed: false,
-    embed_url: "",
     runtime_supported: false,
     runtime_entrypoint: "",
+    runtime_manifest_preset: "none" as RuntimePreset,
+    runtime_manifest_text: "",
     sandbox_level: "strict",
     trusted_domains: "",
     vendor: "",
@@ -85,10 +182,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
     const checked = "checked" in e.target ? e.target.checked : false;
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "embed_allowed" || name === "runtime_supported"
-          ? checked
-          : value,
+      [name]: name === "runtime_supported" ? checked : value,
     }));
   }
 
@@ -104,6 +198,17 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
     }
   }
 
+  function applyRuntimePreset() {
+    if (form.runtime_manifest_preset === "none") return;
+    const manifest = presetManifest(form.runtime_manifest_preset, form.runtime_entrypoint);
+    setForm((prev) => ({
+      ...prev,
+      runtime_supported: true,
+      runtime_entrypoint: manifest.entry,
+      runtime_manifest_text: JSON.stringify(manifest, null, 2),
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -116,6 +221,23 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         .split(",")
         .map((value) => value.trim())
         .filter(Boolean);
+      let runtimeManifest: RuntimeManifest | undefined;
+      const runtimeManifestRaw = form.runtime_manifest_text.trim();
+      if (runtimeManifestRaw) {
+        try {
+          const parsed = JSON.parse(runtimeManifestRaw);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            setError("Runtime manifest must be a JSON object.");
+            setSaving(false);
+            return;
+          }
+          runtimeManifest = parsed as RuntimeManifest;
+        } catch {
+          setError("Runtime manifest must be valid JSON.");
+          setSaving(false);
+          return;
+        }
+      }
 
       const res = await fetch(url, {
         method,
@@ -123,6 +245,9 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         body: JSON.stringify({
           ...form,
           categories,
+          runtime_manifest: runtimeManifest,
+          runtime_manifest_preset:
+            form.runtime_manifest_preset === "none" ? undefined : form.runtime_manifest_preset,
         }),
       });
 
@@ -148,6 +273,34 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
   const hasStoreDraft =
     String(form.app_store_url ?? "").trim().length > 0 ||
     String(form.play_store_url ?? "").trim().length > 0;
+
+  const { runtimeRelevant, isolationRelevant, mobileStoresDefaultOpen, trustDefaultOpen } = useMemo(() => {
+    const delivery = form.delivery_mode as ToolDeliveryMode;
+    const runtimeRelevantInner = delivery === "browserRuntime" || form.runtime_supported;
+    const platformLooksMobile = /ios|android/i.test(form.platform);
+    const mobileStoresOpen = hasStoreDraft || platformLooksMobile;
+    const trustOpen = Boolean(
+      String(form.vendor).trim() ||
+        String(form.privacy_summary).trim() ||
+        String(form.review_notes).trim() ||
+        String(form.last_reviewed_at).trim()
+    );
+    return {
+      runtimeRelevant: runtimeRelevantInner,
+      isolationRelevant: runtimeRelevantInner,
+      mobileStoresDefaultOpen: mobileStoresOpen,
+      trustDefaultOpen: trustOpen,
+    };
+  }, [
+    form.delivery_mode,
+    form.runtime_supported,
+    form.platform,
+    hasStoreDraft,
+    form.vendor,
+    form.privacy_summary,
+    form.review_notes,
+    form.last_reviewed_at,
+  ]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -241,8 +394,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
             className={inputClass}
           >
             <option value="redirect">A: Redirect to trusted web tool</option>
-            <option value="embedded">B: Embed in app</option>
-            <option value="browserRuntime">C: Browser runtime beta</option>
+            <option value="browserRuntime">B: Browser runtime beta</option>
             <option value="download">Download fallback</option>
           </select>
         </div>
@@ -311,16 +463,20 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
           </div>
         ) : (
           <div>
-            <label className={labelClass}>Web app URL {requiredMark}</label>
+            <label className={labelClass}>
+              Web app URL <span className="text-foreground/30">(optional)</span>
+            </label>
             <input
               type="url"
               name="web_url"
               value={form.web_url}
               onChange={handleChange}
-              placeholder="https://… where the app opens"
+              placeholder="https://… external app URL, if any (omit for runtime-only listings)"
               className={inputClass}
-              required
             />
+            <p className="mt-1 text-xs text-foreground/40">
+              Leave blank when users only open the tool via browser runtime (“Try in your browser”).
+            </p>
           </div>
         )}
         <div>
@@ -338,11 +494,19 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         </div>
       </div>
 
-      <div className="rounded-xl border border-card-border bg-white/[0.02] p-4 space-y-4">
-        <p className="text-sm font-medium text-foreground/80">App Store &amp; Google Play</p>
-        <p className="text-xs text-foreground/45 -mt-2">
-          Optional. Include <span className="font-mono text-foreground/55">mobile</span> in categories to group
-          listings. Visitors pick Apple or Android when both links exist; each opens the store off-site.
+      <CollapsibleSection
+        key={`stores-${mobileStoresDefaultOpen}`}
+        title="Mobile app listings"
+        subtitle={
+          mobileStoresDefaultOpen
+            ? "App Store and Google Play URLs. Visitors open each store off-site when set."
+            : "Collapsed for desktop-only listings. Expand to add App Store or Play URLs without changing platform."
+        }
+        defaultOpen={mobileStoresDefaultOpen}
+      >
+        <p className="text-xs text-foreground/45 -mt-1">
+          Include <span className="font-mono text-foreground/55">mobile</span> in categories to group listings with
+          other mobile tools.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
@@ -368,67 +532,22 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
             />
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div>
-          <label className={labelClass}>Embed URL</label>
-          <input
-            type="url"
-            name="embed_url"
-            value={form.embed_url}
-            onChange={handleChange}
-            placeholder="https://... embeddable endpoint"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Trusted domains (comma-separated)</label>
-          <input
-            type="text"
-            name="trusted_domains"
-            value={form.trusted_domains}
-            onChange={handleChange}
-            placeholder="example.com,cdn.example.com"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Runtime entrypoint</label>
-          <input
-            type="text"
-            name="runtime_entrypoint"
-            value={form.runtime_entrypoint}
-            onChange={handleChange}
-            placeholder="/runtime/main.js"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Sandbox level</label>
-          <select
-            name="sandbox_level"
-            value={form.sandbox_level}
-            onChange={handleChange}
-            className={inputClass}
-          >
-            <option value="strict">Strict</option>
-            <option value="standard">Standard</option>
-            <option value="trusted">Trusted</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-        <label className="flex items-center gap-2 text-sm text-foreground/70">
-          <input
-            type="checkbox"
-            name="embed_allowed"
-            checked={form.embed_allowed}
-            onChange={handleChange}
-          />
-          Embed allowed
-        </label>
+      <CollapsibleSection
+        key={`runtime-${runtimeRelevant}`}
+        title="Browser runtime"
+        subtitle={
+          runtimeRelevant
+            ? "Entry script, manifest JSON, and presets for the in-browser runtime beta."
+            : "Shown when delivery is “Browser runtime beta” or “Runtime supported” is checked."
+        }
+        defaultOpen={runtimeRelevant}
+      >
+        <p className="text-xs text-foreground/45 -mt-1 leading-relaxed">
+          Runtime entrypoints and manifest <span className="font-mono text-foreground/55">entry</span> must live under{" "}
+          <span className="font-mono text-foreground/55">/runtime/...</span> only.
+        </p>
         <label className="flex items-center gap-2 text-sm text-foreground/70">
           <input
             type="checkbox"
@@ -438,65 +557,178 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
           />
           Runtime supported
         </label>
-        <div>
-          <label className={labelClass}>Data handling</label>
-          <select
-            name="data_handling"
-            value={form.data_handling}
-            onChange={handleChange}
-            className={inputClass}
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Last reviewed</label>
-          <input
-            type="date"
-            name="last_reviewed_at"
-            value={form.last_reviewed_at}
-            onChange={handleChange}
-            className={inputClass}
-          />
-        </div>
-      </div>
+        {runtimeRelevant ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>Runtime entrypoint</label>
+                <input
+                  type="text"
+                  name="runtime_entrypoint"
+                  value={form.runtime_entrypoint}
+                  onChange={handleChange}
+                  placeholder="/runtime/main.js"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-foreground/45">
+                  Relative path only (<span className="font-mono text-foreground/55">/runtime/...</span>) — same site, no{" "}
+                  <span className="font-mono text-foreground/55">https://</span> prefix.
+                </p>
+              </div>
+              <div>
+                <label className={labelClass}>Runtime preset</label>
+                <div className="flex gap-2">
+                  <select
+                    name="runtime_manifest_preset"
+                    value={form.runtime_manifest_preset}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="none">No preset</option>
+                    {Object.entries(RUNTIME_PRESET_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={applyRuntimePreset}
+                    className="px-3 py-2 text-xs font-medium glass-card text-foreground/70 hover:text-foreground border border-card-border shrink-0"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Runtime manifest JSON</label>
+              <textarea
+                name="runtime_manifest_text"
+                value={form.runtime_manifest_text}
+                onChange={handleChange}
+                placeholder='{"version":1,"entry":"/runtime/main.js","executionMode":"module","permissions":{"network":false},"allowedOrigins":[],"storagePolicy":"session","capabilities":["fileOpen"]}'
+                className={`${inputClass} h-44 resize-y font-mono text-xs`}
+              />
+              <p className="mt-1 text-xs text-foreground/45">
+                Optional. If provided, this is validated by the API. Presets generate a safe starter manifest.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-foreground/40">
+            Set delivery mode to <strong className="font-medium text-foreground/55">Browser runtime beta</strong> or
+            enable <strong className="font-medium text-foreground/55">Runtime supported</strong> to configure the
+            entrypoint and manifest.
+          </p>
+        )}
+      </CollapsibleSection>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div>
-          <label className={labelClass}>Vendor</label>
-          <input
-            type="text"
-            name="vendor"
-            value={form.vendor}
-            onChange={handleChange}
-            placeholder="Provider or publisher name"
-            className={inputClass}
-          />
+      <CollapsibleSection
+        key={`sandbox-${isolationRelevant}`}
+        title="Sandbox & isolation"
+        subtitle={
+          isolationRelevant
+            ? "Sandbox level and trusted domains for browser runtime iframe/module experiences."
+            : "Configure ahead of enabling browser runtime beta; collapses until runtime is relevant."
+        }
+        defaultOpen={isolationRelevant}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl">
+          <div className="max-w-md">
+            <label className={labelClass}>Sandbox level</label>
+            <select
+              name="sandbox_level"
+              value={form.sandbox_level}
+              onChange={handleChange}
+              className={inputClass}
+            >
+              <option value="strict">Strict</option>
+              <option value="standard">Standard</option>
+              <option value="trusted">Trusted</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Trusted domains (comma-separated)</label>
+            <input
+              type="text"
+              name="trusted_domains"
+              value={form.trusted_domains}
+              onChange={handleChange}
+              placeholder="example.com,cdn.example.com"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-foreground/45">
+              Used when the runtime communicates with origins outside the deployment (module manifest / presets).
+            </p>
+          </div>
         </div>
-        <div>
-          <label className={labelClass}>Privacy summary</label>
-          <input
-            type="text"
-            name="privacy_summary"
-            value={form.privacy_summary}
-            onChange={handleChange}
-            placeholder="Where user data is processed and retained"
-            className={inputClass}
-          />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        key={`trust-${trustDefaultOpen}`}
+        title="Trust & moderation"
+        subtitle="Vendor, privacy, data handling, and internal review fields."
+        defaultOpen={trustDefaultOpen}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>Vendor</label>
+            <input
+              type="text"
+              name="vendor"
+              value={form.vendor}
+              onChange={handleChange}
+              placeholder="Provider or publisher name"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Privacy summary</label>
+            <input
+              type="text"
+              name="privacy_summary"
+              value={form.privacy_summary}
+              onChange={handleChange}
+              placeholder="Where user data is processed and retained"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Data handling</label>
+            <select
+              name="data_handling"
+              value={form.data_handling}
+              onChange={handleChange}
+              className={inputClass}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Last reviewed</label>
+            <input
+              type="date"
+              name="last_reviewed_at"
+              value={form.last_reviewed_at}
+              onChange={handleChange}
+              className={inputClass}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className={labelClass}>Review notes</label>
+            <textarea
+              name="review_notes"
+              value={form.review_notes}
+              onChange={handleChange}
+              className={`${inputClass} h-24 resize-y`}
+              placeholder="Moderation checklist notes, trust rationale, and follow-up tasks"
+            />
+          </div>
         </div>
-        <div className="md:col-span-2">
-          <label className={labelClass}>Review notes</label>
-          <textarea
-            name="review_notes"
-            value={form.review_notes}
-            onChange={handleChange}
-            className={`${inputClass} h-24 resize-y`}
-            placeholder="Moderation checklist notes, trust rationale, and follow-up tasks"
-          />
-        </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-4">

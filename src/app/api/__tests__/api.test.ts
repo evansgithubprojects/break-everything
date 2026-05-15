@@ -339,6 +339,138 @@ describe("Tools API", () => {
     expect(data.tool.download_url).toBe("");
   });
 
+  it("POST /api/tools creates a web tool with empty web_url when browserRuntime is configured", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Runtime Without Web URL",
+      slug: "runtime-without-web-url-tool",
+      description: "Runtime-only web-kind tool",
+      short_description: "No separate app URL",
+      categories: ["utility"],
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      web_url: "",
+      download_url: "",
+      runtime_entrypoint: "/runtime/tools/no-external-url.js",
+      github_url: "https://github.com/test/runtime-no-web-url",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(201);
+
+    const getReq = jsonRequest("http://localhost/api/tools/runtime-without-web-url-tool", "GET");
+    const getRes = await getToolBySlug(getReq, {
+      params: Promise.resolve({ slug: "runtime-without-web-url-tool" }),
+    });
+    const data = await getRes.json();
+    expect(data.tool.tool_kind).toBe("web");
+    expect(data.tool.web_url).toBe("");
+    expect(data.tool.runtime_supported).toBe(1);
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/no-external-url.js");
+  });
+
+  it("POST /api/tools rejects non-empty invalid web_url for web tools", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Bad Web URL",
+      slug: "bad-web-url-tool",
+      description: "bad url",
+      short_description: "bad",
+      categories: ["utility"],
+      tool_kind: "web",
+      web_url: "not-a-valid-url",
+      download_url: "",
+      github_url: "https://github.com/test/bad-web-url",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/tools accepts runtime_manifest and derives runtime entrypoint", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Runtime Tool",
+      slug: "runtime-tool",
+      description: "Runtime-backed browser tool",
+      short_description: "Runtime short",
+      categories: ["utility"],
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      web_url: "https://app.example.com/runtime-tool",
+      runtime_manifest: {
+        version: 1,
+        entry: "/runtime/tools/runtime-tool.js",
+        executionMode: "module",
+        permissions: { network: false, storage: true },
+        allowedOrigins: ["https://app.example.com"],
+        storagePolicy: "session",
+        capabilities: ["fileOpen", "share"],
+      },
+      github_url: "https://github.com/test/runtime-tool",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(201);
+
+    const getReq = jsonRequest("http://localhost/api/tools/runtime-tool", "GET");
+    const getRes = await getToolBySlug(getReq, {
+      params: Promise.resolve({ slug: "runtime-tool" }),
+    });
+    const data = await getRes.json();
+    expect(data.tool.runtime_supported).toBe(1);
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/runtime-tool.js");
+  });
+
+  it("POST /api/tools rejects invalid runtime_manifest", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Invalid Runtime Tool",
+      slug: "invalid-runtime-tool",
+      description: "bad runtime",
+      short_description: "bad runtime",
+      categories: ["utility"],
+      tool_kind: "web",
+      web_url: "https://app.example.com/invalid-runtime-tool",
+      runtime_manifest: {
+        version: 0,
+        entry: " ",
+      },
+      github_url: "https://github.com/test/invalid-runtime-tool",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/tools builds manifest from runtime_manifest_preset", async () => {
+    await loginAsAdmin();
+    const req = jsonRequest("http://localhost/api/tools", "POST", {
+      name: "Preset Runtime Tool",
+      slug: "preset-runtime-tool",
+      description: "runtime preset",
+      short_description: "runtime preset",
+      categories: ["utility"],
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      web_url: "https://app.example.com/preset-runtime-tool",
+      runtime_manifest_preset: "localOnly",
+      runtime_entrypoint: "/runtime/tools/preset-runtime-tool.js",
+      github_url: "https://github.com/test/preset-runtime-tool",
+      platform: "web",
+    });
+    const res = await postTool(req);
+    expect(res.status).toBe(201);
+
+    const getReq = jsonRequest("http://localhost/api/tools/preset-runtime-tool", "GET");
+    const getRes = await getToolBySlug(getReq, {
+      params: Promise.resolve({ slug: "preset-runtime-tool" }),
+    });
+    const data = await getRes.json();
+    expect(data.tool.runtime_supported).toBe(1);
+    expect(data.tool.runtime_entrypoint).toBe("/runtime/tools/preset-runtime-tool.js");
+  });
+
   it("POST /api/tools returns 500 for duplicate slug", async () => {
     await loginAsAdmin();
     const req = jsonRequest("http://localhost/api/tools", "POST", {
@@ -514,6 +646,22 @@ describe("Events API", () => {
     expect(data.success).toBe(true);
   });
 
+  it("POST /api/events accepts runtime lifecycle events with UTM context", async () => {
+    const req = jsonRequest("http://localhost/api/events", "POST", {
+      event: "runtime_start",
+      slug: "pdf-forge",
+      action: "runtime_boot",
+      utm_source: "uw-madison_email",
+      utm_medium: "email",
+      utm_campaign: "be_campus_2026",
+      utm_term: "spring",
+      utm_content: "cta_a",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(200);
+    expect((await res.json()).success).toBe(true);
+  });
+
   it("POST /api/events rejects unknown event", async () => {
     const req = jsonRequest("http://localhost/api/events", "POST", {
       event: "unknown_event",
@@ -539,6 +687,17 @@ describe("Events API", () => {
       event: "tool_action_click",
       slug: "pdf-forge",
       action: "download;",
+    });
+    const res = await postEvent(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/events rejects invalid utm field values", async () => {
+    const req = jsonRequest("http://localhost/api/events", "POST", {
+      event: "runtime_error",
+      slug: "pdf-forge",
+      action: "module_load_failed",
+      utm_campaign: "bad value with spaces",
     });
     const res = await postEvent(req);
     expect(res.status).toBe(400);
@@ -720,7 +879,7 @@ describe("Events API", () => {
       body: JSON.stringify({
         event: "tool_action_click",
         slug: "pdf-forge",
-        action: "embed",
+        action: "runtime",
       }),
     });
     const blockedRes = await postEvent(blocked);
@@ -772,7 +931,7 @@ describe("Analytics API", () => {
     const evReq = jsonRequest("http://localhost/api/events", "POST", {
       event: "tool_action_click",
       slug: "clipvault",
-      action: "embed",
+      action: "runtime",
     });
     expect((await postEvent(evReq)).status).toBe(200);
 
@@ -793,11 +952,11 @@ describe("Analytics API", () => {
     if (filData.summary.topTools.length === 1) {
       expect(filData.summary.topTools[0].slug).toBe("clipvault");
     }
-    const embedRow = (filData.summary.byAction as { action: string; count: number }[]).find(
-      (a) => a.action === "embed"
+    const runtimeRow = (filData.summary.byAction as { action: string; count: number }[]).find(
+      (a) => a.action === "runtime"
     );
-    expect(embedRow).toBeDefined();
-    expect(embedRow!.count).toBeGreaterThanOrEqual(1);
+    expect(runtimeRow).toBeDefined();
+    expect(runtimeRow!.count).toBeGreaterThanOrEqual(1);
   });
 
   it("GET /api/analytics clamps days to default when below 1 or non-numeric", async () => {

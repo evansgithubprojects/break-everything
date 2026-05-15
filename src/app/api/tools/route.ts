@@ -7,13 +7,18 @@ import { jsonServerError } from "@/server/api-response";
 import { readJsonObjectBody } from "@/server/parse-json-body";
 import { enforceSameOrigin } from "@/server/same-origin";
 import { toPublicTool } from "@/server/tool-public";
+import { validateFirstPartyInApp } from "@/server/first-party-tool-validation";
+import { getServerFirstPartyOrigin } from "@/server/first-party-origin";
 import {
-  isAllowedEmbedUrl,
   isAllowedHttpUrl,
   isValidToolSlug,
+  buildRuntimeManifestFromPreset,
+  coerceRuntimeManifestPayloadForParse,
+  coerceStoredRuntimeEntry,
   normalizeCategoriesInput,
+  parseRuntimeManifestPreset,
+  parseRuntimeManifestInput,
   normalizeTrustedDomainsInput,
-  parseCsvDomains,
   parseDataHandling,
   parseDeliveryMode,
   parseSandboxLevel,
@@ -70,8 +75,27 @@ export async function POST(request: NextRequest) {
   const webUrl = String(body.web_url ?? "").trim();
   const appStoreUrl = String(body.app_store_url ?? "").trim();
   const playStoreUrl = String(body.play_store_url ?? "").trim();
-  const embedUrl = String(body.embed_url ?? "").trim();
-  const runtimeEntrypoint = String(body.runtime_entrypoint ?? "").trim();
+  const siteOrigin = getServerFirstPartyOrigin();
+  const runtimePreset = parseRuntimeManifestPreset(body.runtime_manifest_preset);
+  const presetEntry =
+    coerceStoredRuntimeEntry(body.runtime_entrypoint, siteOrigin) ||
+    coerceStoredRuntimeEntry("/runtime/main.js", siteOrigin);
+  const runtimeManifestInput =
+    coerceRuntimeManifestPayloadForParse(body.runtime_manifest, siteOrigin) ??
+    (runtimePreset
+      ? buildRuntimeManifestFromPreset(runtimePreset, {
+          entry: presetEntry,
+          trustedDomainsCsv: String(body.trusted_domains ?? ""),
+        })
+      : undefined);
+  const runtimeManifestResult = parseRuntimeManifestInput(runtimeManifestInput);
+  if (!runtimeManifestResult.ok) {
+    return NextResponse.json({ error: runtimeManifestResult.error }, { status: 400 });
+  }
+  const runtimeManifest = runtimeManifestResult.manifest;
+  const runtimeEntrypoint =
+    coerceStoredRuntimeEntry(body.runtime_entrypoint, siteOrigin) ||
+    coerceStoredRuntimeEntry(runtimeManifest?.entry, siteOrigin);
 
   if (appStoreUrl && !isAllowedHttpUrl(appStoreUrl)) {
     return NextResponse.json(
@@ -97,12 +121,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: categoriesResult.error }, { status: 400 });
   }
 
-  let deliveryMode: "redirect" | "embedded" | "browserRuntime" | "download" = "download";
+  let deliveryMode: "redirect" | "browserRuntime" | "download" = "download";
   if (body.delivery_mode != null && String(body.delivery_mode).trim() !== "") {
     const parsed = parseDeliveryMode(body.delivery_mode);
     if (!parsed) {
       return NextResponse.json(
-        { error: "delivery_mode must be redirect, embedded, browserRuntime, or download" },
+        { error: "delivery_mode must be redirect, browserRuntime, or download" },
         { status: 400 }
       );
     }
@@ -142,9 +166,9 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  if (toolKind === "web" && !isAllowedHttpUrl(webUrl)) {
+  if (toolKind === "web" && webUrl && !isAllowedHttpUrl(webUrl)) {
     return NextResponse.json(
-      { error: "web_url must be a valid http(s) URL for web apps" },
+      { error: "web_url must be a valid http(s) URL when provided" },
       { status: 400 }
     );
   }
@@ -157,19 +181,22 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  if (deliveryMode === "embedded") {
-    if (!isAllowedEmbedUrl(embedUrl || webUrl, parseCsvDomains(trustedDomains))) {
-      return NextResponse.json(
-        { error: "embedded tools require an embed_url/web_url matching trusted_domains" },
-        { status: 400 }
-      );
-    }
-  }
   if (deliveryMode === "browserRuntime" && runtimeEntrypoint.length < 2) {
     return NextResponse.json(
       { error: "browserRuntime tools require runtime_entrypoint" },
       { status: 400 }
     );
+  }
+  const runtimeSupported = Boolean(body.runtime_supported) || deliveryMode === "browserRuntime" || !!runtimeManifest;
+
+  const firstPartyErr = validateFirstPartyInApp({
+    delivery_mode: deliveryMode,
+    runtime_supported: runtimeSupported,
+    runtime_entrypoint: runtimeEntrypoint,
+    runtime_manifest: runtimeManifest,
+  });
+  if (firstPartyErr) {
+    return NextResponse.json({ error: firstPartyErr }, { status: 400 });
   }
 
   if (!isValidToolSlug(String(body.slug))) {
@@ -207,10 +234,11 @@ export async function POST(request: NextRequest) {
       web_url: webUrl,
       app_store_url: appStoreUrl,
       play_store_url: playStoreUrl,
-      embed_allowed: Boolean(body.embed_allowed) ? 1 : 0,
-      embed_url: embedUrl,
-      runtime_supported: Boolean(body.runtime_supported) ? 1 : 0,
+      embed_allowed: 0,
+      embed_url: "",
+      runtime_supported: runtimeSupported ? 1 : 0,
       runtime_entrypoint: runtimeEntrypoint,
+      runtime_manifest: runtimeManifest,
       sandbox_level: sandboxLevel,
       trusted_domains: trustedDomains,
       vendor: String(body.vendor ?? "").trim(),

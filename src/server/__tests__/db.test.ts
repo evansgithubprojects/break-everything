@@ -402,4 +402,29 @@ describe("Analytics DB", () => {
     expect(filtered.toolActionClicks).toBe(filtered.totals.all);
     expect(filtered.topTools.every((t) => t.slug === "pdf-forge")).toBe(true);
   });
+
+  it("getAnalyticsSummary includes runtime lifecycle and UTM campaign aggregates", async () => {
+    await recordAnalyticsEvent({
+      event: "runtime_start",
+      slug: "pdf-forge",
+      action: "runtime_boot",
+      utm_campaign: "be_campus_2026",
+    });
+    await recordAnalyticsEvent({
+      event: "runtime_error",
+      slug: "pdf-forge",
+      action: "module_load_failed",
+      utm_campaign: "be_campus_2026",
+    });
+
+    const since = sinceUtcMidnightDaysAgo(1);
+    const summary = await getAnalyticsSummary(since);
+    const runtimeStart = summary.runtimeLifecycleEvents.find((row) => row.event === "runtime_start");
+    const runtimeError = summary.runtimeLifecycleEvents.find((row) => row.event === "runtime_error");
+    expect(runtimeStart?.count).toBeGreaterThanOrEqual(1);
+    expect(runtimeError?.count).toBeGreaterThanOrEqual(1);
+    expect(summary.runtimeFailureRate).toBeGreaterThan(0);
+    const campaign = summary.byUtmCampaign.find((row) => row.campaign === "be_campus_2026");
+    expect(campaign?.count).toBeGreaterThanOrEqual(2);
+  });
 });

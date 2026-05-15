@@ -10,6 +10,15 @@ const securityHeaders = [
   },
 ];
 
+/**
+ * ffmpeg.wasm (multi-threaded) needs a cross-origin isolated environment for SharedArrayBuffer.
+ * `credentialless` keeps blob/CORS fetches to npm CDNs workable; `require-corp` often breaks unpkg without CORP.
+ */
+const crossOriginIsolationHeaders = [
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+];
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
 
@@ -18,6 +27,14 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/runtime/:path*",
+        headers: crossOriginIsolationHeaders,
+      },
+      {
+        source: "/tools/:path*",
+        headers: crossOriginIsolationHeaders,
       },
     ];
   },

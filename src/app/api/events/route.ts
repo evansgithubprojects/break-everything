@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   ANALYTICS_INGEST_ALLOWED_EVENTS,
   normalizeAnalyticsAction,
+  normalizeAnalyticsUtmContext,
 } from "@/server/analytics-ingest";
 import { rateLimiters } from "@/server/rate-limit";
 import { recordAnalyticsEvent } from "@/server/db";
@@ -38,17 +39,31 @@ export async function POST(request: NextRequest) {
     if (action === null) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
+    const utm = normalizeAnalyticsUtmContext(body);
+    if (utm === null) {
+      return NextResponse.json({ error: "Invalid utm context" }, { status: 400 });
+    }
 
     if (process.env.NODE_ENV === "development") {
       console.info("[event]", {
         event,
         slug,
         action,
+        utm,
         ts: new Date().toISOString(),
       });
     }
 
-    await recordAnalyticsEvent({ event, slug, action });
+    await recordAnalyticsEvent({
+      event,
+      slug,
+      action,
+      utm_source: utm.utm_source,
+      utm_medium: utm.utm_medium,
+      utm_campaign: utm.utm_campaign,
+      utm_term: utm.utm_term,
+      utm_content: utm.utm_content,
+    });
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     if (err instanceof InvalidJsonBodyError) {

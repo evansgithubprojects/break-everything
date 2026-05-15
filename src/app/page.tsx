@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import BounceInsightTracker from "@/components/analytics/BounceInsightTracker";
 import ToolCard from "@/components/tools/ToolCard";
@@ -8,14 +7,7 @@ import {
   getSourceLinkedToolStats,
   getToolCount,
 } from "@/server/db";
-import { GOOGLE_ADSENSE_ACCOUNT } from "@/config";
 import type { Tool } from "@/types";
-
-export const metadata: Metadata = {
-  other: {
-    "google-adsense-account": GOOGLE_ADSENSE_ACCOUNT,
-  },
-};
 
 export const dynamic = "force-dynamic";
 

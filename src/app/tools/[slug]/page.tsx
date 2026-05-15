@@ -5,11 +5,7 @@ import ToolAccessLinks from "@/components/tools/ToolAccessLinks";
 import FavoriteToggle from "@/components/tools/FavoriteToggle";
 import ToolIcon from "@/components/tools/ToolIcon";
 import TrustPanel from "@/components/tools/TrustPanel";
-import {
-  DEFAULT_OG_IMAGE,
-  GOOGLE_ADSENSE_ACCOUNT,
-  SITE_NAME,
-} from "@/config";
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/config";
 import { getToolBySlug } from "@/server/db";
 import type { Tool } from "@/types";
 
@@ -67,9 +63,6 @@ export async function generateMetadata({
           height: DEFAULT_OG_IMAGE.height,
         },
       ],
-    },
-    other: {
-      "google-adsense-account": GOOGLE_ADSENSE_ACCOUNT,
     },
   };
 }

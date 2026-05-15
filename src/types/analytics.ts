@@ -4,6 +4,9 @@ export interface AnalyticsSummary {
   totals: { all: number; byEvent: { event: string; count: number }[] };
   uniqueSlugs: number;
   toolActionClicks: number;
+  runtimeLifecycleEvents: { event: string; count: number }[];
+  runtimeFailureRate: number;
+  byUtmCampaign: { campaign: string; count: number }[];
   byDay: { date: string; count: number }[];
   topTools: { slug: string; count: number }[];
   byAction: { action: string; count: number }[];

@@ -1,4 +1,8 @@
-import { normalizeAnalyticsAction, ANALYTICS_INGEST_ALLOWED_EVENTS } from "@/server/analytics-ingest";
+import {
+  ANALYTICS_INGEST_ALLOWED_EVENTS,
+  normalizeAnalyticsAction,
+  normalizeAnalyticsUtmContext,
+} from "@/server/analytics-ingest";
 
 describe("normalizeAnalyticsAction", () => {
   it("returns empty string when omitted or whitespace", () => {
@@ -27,7 +31,43 @@ describe("normalizeAnalyticsAction", () => {
 });
 
 describe("ANALYTICS_INGEST_ALLOWED_EVENTS", () => {
-  it("includes tool_action_click for client ingest", () => {
+  it("includes tool and runtime ingest events", () => {
     expect(ANALYTICS_INGEST_ALLOWED_EVENTS.has("tool_action_click")).toBe(true);
+    expect(ANALYTICS_INGEST_ALLOWED_EVENTS.has("runtime_start")).toBe(true);
+    expect(ANALYTICS_INGEST_ALLOWED_EVENTS.has("runtime_ready")).toBe(true);
+    expect(ANALYTICS_INGEST_ALLOWED_EVENTS.has("runtime_error")).toBe(true);
+    expect(ANALYTICS_INGEST_ALLOWED_EVENTS.has("runtime_action")).toBe(true);
+  });
+});
+
+describe("normalizeAnalyticsUtmContext", () => {
+  it("normalizes missing fields to empty strings", () => {
+    expect(normalizeAnalyticsUtmContext({})).toEqual({
+      utm_source: "",
+      utm_medium: "",
+      utm_campaign: "",
+      utm_term: "",
+      utm_content: "",
+    });
+  });
+
+  it("trims valid utm fields", () => {
+    expect(
+      normalizeAnalyticsUtmContext({
+        utm_source: " newsletter ",
+        utm_campaign: " spring_launch ",
+      })
+    ).toEqual({
+      utm_source: "newsletter",
+      utm_medium: "",
+      utm_campaign: "spring_launch",
+      utm_term: "",
+      utm_content: "",
+    });
+  });
+
+  it("rejects invalid utm fields", () => {
+    expect(normalizeAnalyticsUtmContext({ utm_source: "x".repeat(121) })).toBeNull();
+    expect(normalizeAnalyticsUtmContext({ utm_source: "ok", utm_medium: "bad\nvalue" })).toBeNull();
   });
 });

@@ -126,7 +126,9 @@ export default function AdminAnalyticsPanel() {
               <div className="text-xs text-foreground/40 mt-1">Events in range</div>
             </div>
             <div className="glass-card p-5">
-              <div className="text-2xl font-bold text-foreground">{summary.toolActionClicks}</div>
+              <div className="text-2xl font-bold text-foreground">
+                {summary.toolActionClicks}
+              </div>
               <div className="text-xs text-foreground/40 mt-1">Clicks on tool buttons</div>
             </div>
             <div className="glass-card p-5">
@@ -141,6 +143,23 @@ export default function AdminAnalyticsPanel() {
                 {new Date(summary.range.until).toLocaleDateString()}
               </div>
               <div className="text-xs text-foreground/40 mt-1">Range (local display)</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="glass-card p-5">
+              <div className="text-2xl font-bold text-foreground">
+                {summary.runtimeLifecycleEvents.reduce((total, row) => total + row.count, 0)}
+              </div>
+              <div className="text-xs text-foreground/40 mt-1">Runtime lifecycle events</div>
+            </div>
+            <div className="glass-card p-5">
+              <div className="text-2xl font-bold text-foreground">
+                {(summary.runtimeFailureRate * 100).toFixed(1)}%
+              </div>
+              <div className="text-xs text-foreground/40 mt-1">
+                Runtime failure rate (`runtime_error` / `runtime_start`)
+              </div>
             </div>
           </div>
 
@@ -202,6 +221,23 @@ export default function AdminAnalyticsPanel() {
               )}
             </div>
           </div>
+
+          {summary.byUtmCampaign.length > 0 && (
+            <div className="glass-card p-6">
+              <h3 className="text-sm font-bold text-foreground mb-4">UTM campaigns</h3>
+              <ul className="space-y-2">
+                {summary.byUtmCampaign.map((row) => (
+                  <li
+                    key={row.campaign}
+                    className="flex items-center justify-between text-sm gap-3"
+                  >
+                    <span className="font-mono text-foreground/80">{row.campaign}</span>
+                    <span className="shrink-0 font-semibold text-foreground">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="glass-card p-6">
             <h3 className="text-sm font-bold text-foreground mb-4">Events per day (UTC)</h3>

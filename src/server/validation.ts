@@ -1,3 +1,15 @@
+import type {
+  RuntimeCapability,
+  RuntimeExecutionMode,
+  RuntimeManifest,
+  RuntimeStoragePolicy,
+} from "@/types";
+import {
+  coerceRuntimeEntryToRelative,
+  RUNTIME_ENTRY_PATH_MAX_LEN,
+  sanitizeRuntimeEntryPath,
+} from "@/lib/first-party-inapp";
+
 /** HTTP(S) URLs only — blocks javascript:, data:, etc. in stored link fields */
 export function isAllowedHttpUrl(value: string): boolean {
   const t = value.trim();
@@ -27,7 +39,7 @@ export function isValidToolSlug(slug: string): boolean {
 }
 
 export type ParsedToolKind = "download" | "web";
-export type ParsedDeliveryMode = "redirect" | "embedded" | "browserRuntime" | "download";
+export type ParsedDeliveryMode = "redirect" | "browserRuntime" | "download";
 export type ParsedSandboxLevel = "strict" | "standard" | "trusted";
 export type ParsedDataHandling = "low" | "medium" | "high";
 
@@ -39,12 +51,7 @@ export function parseToolKind(value: unknown): ParsedToolKind | null {
 }
 
 export function parseDeliveryMode(value: unknown): ParsedDeliveryMode | null {
-  if (
-    value === "redirect" ||
-    value === "embedded" ||
-    value === "browserRuntime" ||
-    value === "download"
-  ) {
+  if (value === "redirect" || value === "browserRuntime" || value === "download") {
     return value;
   }
   return null;
@@ -157,4 +164,230 @@ export function isAllowedEmbedUrl(url: string, allowlist: string[]): boolean {
   } catch {
     return false;
   }
+}
+
+const RUNTIME_ORIGIN_MAX = 20;
+const RUNTIME_CAPABILITY_SET = new Set<RuntimeCapability>([
+  "fileOpen",
+  "fileSave",
+  "share",
+  "copyToClipboard",
+  "openExternal",
+]);
+export type RuntimeManifestPreset = "localOnly" | "networkedUtility" | "trustedEmbeddedApp";
+const RUNTIME_PRESET_SET = new Set<RuntimeManifestPreset>([
+  "localOnly",
+  "networkedUtility",
+  "trustedEmbeddedApp",
+]);
+
+function parseRuntimeExecutionMode(value: unknown): RuntimeExecutionMode | null {
+  if (value === "iframe" || value === "module") return value;
+  return null;
+}
+
+function parseRuntimeStoragePolicy(value: unknown): RuntimeStoragePolicy | null {
+  if (value === "memory" || value === "session" || value === "persistent") return value;
+  return null;
+}
+
+function isValidRuntimeOrigin(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    return !!u.hostname && !u.pathname.replace("/", "") && !u.search && !u.hash;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeRuntimeEntry(raw: unknown): string | null {
+  const entry = String(raw ?? "").trim();
+  if (
+    !entry ||
+    entry.length > RUNTIME_ENTRY_PATH_MAX_LEN ||
+    /\s/.test(entry)
+  ) {
+    return null;
+  }
+  return sanitizeRuntimeEntryPath(entry);
+}
+
+/** Persistable relative `/runtime…` entry; coerces legacy same-origin URLs from admin writes. */
+export function coerceStoredRuntimeEntry(raw: unknown, origin: string): string {
+  return coerceRuntimeEntryToRelative(String(raw ?? "").trim(), origin) ?? "";
+}
+
+/** If manifest entry is present, rewrite same-origin URL into a sanitized path before `parseRuntimeManifestInput`. */
+export function coerceRuntimeManifestPayloadForParse(value: unknown, origin: string): unknown {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return value;
+  const o = value as Record<string, unknown>;
+  const trimmed = String(o.entry ?? "").trim();
+  if (!trimmed) return value;
+  const coerced = coerceRuntimeEntryToRelative(trimmed, origin);
+  if (!coerced) return value;
+  return { ...o, entry: coerced };
+}
+
+/**
+ * Parses and validates an optional runtime manifest payload.
+ * Used for forward-compatible API contracts before full DB persistence rollout.
+ */
+export function parseRuntimeManifestInput(
+  value: unknown
+): { ok: true; manifest: RuntimeManifest | null } | { ok: false; error: string } {
+  if (value == null || String(value).trim() === "") {
+    return { ok: true, manifest: null };
+  }
+  if (typeof value !== "object" || Array.isArray(value)) {
+    return { ok: false, error: "runtime_manifest must be an object" };
+  }
+
+  const body = value as Record<string, unknown>;
+  const entry = normalizeRuntimeEntry(body.entry);
+  if (!entry) {
+    return {
+      ok: false,
+      error: "runtime_manifest.entry must be a relative path under /runtime (no scheme or hostname)",
+    };
+  }
+
+  const executionMode = parseRuntimeExecutionMode(body.executionMode ?? "iframe");
+  if (!executionMode) {
+    return { ok: false, error: "runtime_manifest.executionMode must be iframe or module" };
+  }
+
+  const storagePolicy = parseRuntimeStoragePolicy(body.storagePolicy ?? "session");
+  if (!storagePolicy) {
+    return { ok: false, error: "runtime_manifest.storagePolicy must be memory, session, or persistent" };
+  }
+
+  const versionRaw = Number(body.version ?? 1);
+  if (!Number.isSafeInteger(versionRaw) || versionRaw < 1 || versionRaw > 100) {
+    return { ok: false, error: "runtime_manifest.version must be an integer between 1 and 100" };
+  }
+
+  const permissionsRaw = body.permissions;
+  const permissions: RuntimeManifest["permissions"] = {};
+  if (permissionsRaw != null) {
+    if (typeof permissionsRaw !== "object" || Array.isArray(permissionsRaw)) {
+      return { ok: false, error: "runtime_manifest.permissions must be an object" };
+    }
+    for (const [k, v] of Object.entries(permissionsRaw as Record<string, unknown>)) {
+      if (!["network", "storage", "clipboard", "downloads", "popups"].includes(k)) {
+        return { ok: false, error: `runtime_manifest.permissions.${k} is not supported` };
+      }
+      if (typeof v !== "boolean") {
+        return { ok: false, error: `runtime_manifest.permissions.${k} must be boolean` };
+      }
+      (permissions as Record<string, boolean>)[k] = v;
+    }
+  }
+
+  const allowedOriginsRaw = body.allowedOrigins;
+  const allowedOrigins: string[] = [];
+  if (allowedOriginsRaw != null) {
+    if (!Array.isArray(allowedOriginsRaw)) {
+      return { ok: false, error: "runtime_manifest.allowedOrigins must be an array" };
+    }
+    if (allowedOriginsRaw.length > RUNTIME_ORIGIN_MAX) {
+      return { ok: false, error: `runtime_manifest.allowedOrigins supports up to ${RUNTIME_ORIGIN_MAX} entries` };
+    }
+    const seen = new Set<string>();
+    for (const item of allowedOriginsRaw) {
+      if (typeof item !== "string" || !isValidRuntimeOrigin(item.trim())) {
+        return { ok: false, error: "runtime_manifest.allowedOrigins must contain valid http(s) origins" };
+      }
+      const normalized = item.trim().toLowerCase();
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      allowedOrigins.push(normalized);
+    }
+  }
+
+  const capabilitiesRaw = body.capabilities;
+  const capabilities: RuntimeCapability[] = [];
+  if (capabilitiesRaw != null) {
+    if (!Array.isArray(capabilitiesRaw)) {
+      return { ok: false, error: "runtime_manifest.capabilities must be an array" };
+    }
+    const seen = new Set<RuntimeCapability>();
+    for (const item of capabilitiesRaw) {
+      if (typeof item !== "string" || !RUNTIME_CAPABILITY_SET.has(item as RuntimeCapability)) {
+        return { ok: false, error: "runtime_manifest.capabilities contains unsupported capability" };
+      }
+      const c = item as RuntimeCapability;
+      if (seen.has(c)) continue;
+      seen.add(c);
+      capabilities.push(c);
+    }
+  }
+
+  return {
+    ok: true,
+    manifest: {
+      version: versionRaw,
+      entry,
+      executionMode,
+      permissions,
+      allowedOrigins,
+      storagePolicy,
+      capabilities,
+    },
+  };
+}
+
+export function parseRuntimeManifestPreset(value: unknown): RuntimeManifestPreset | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim() as RuntimeManifestPreset;
+  return RUNTIME_PRESET_SET.has(v) ? v : null;
+}
+
+function allowlistToOrigins(csv: string): string[] {
+  return parseCsvDomains(csv).map((host) => `https://${host}`);
+}
+
+export function buildRuntimeManifestFromPreset(
+  preset: RuntimeManifestPreset,
+  options: {
+    entry: string;
+    trustedDomainsCsv?: string;
+  }
+): RuntimeManifest {
+  const entry = options.entry.trim();
+  const allowedOrigins = options.trustedDomainsCsv
+    ? allowlistToOrigins(options.trustedDomainsCsv)
+    : [];
+
+  if (preset === "localOnly") {
+    return {
+      version: 1,
+      entry,
+      executionMode: "module",
+      permissions: { network: false, storage: true, clipboard: false, downloads: false, popups: false },
+      allowedOrigins: [],
+      storagePolicy: "session",
+      capabilities: ["fileOpen", "fileSave"],
+    };
+  }
+  if (preset === "networkedUtility") {
+    return {
+      version: 1,
+      entry,
+      executionMode: "module",
+      permissions: { network: true, storage: true, clipboard: true, downloads: true, popups: false },
+      allowedOrigins,
+      storagePolicy: "session",
+      capabilities: ["fileOpen", "fileSave", "copyToClipboard", "share"],
+    };
+  }
+  return {
+    version: 1,
+    entry,
+    executionMode: "iframe",
+    permissions: { network: true, storage: true, clipboard: true, downloads: true, popups: true },
+    allowedOrigins,
+    storagePolicy: "persistent",
+    capabilities: ["openExternal", "share", "copyToClipboard"],
+  };
 }
