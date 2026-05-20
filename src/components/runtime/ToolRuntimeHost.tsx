@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RuntimeManifest, Tool } from "@/types";
 import { trackRuntimeLifecycleEvent } from "@/analytics";
-import { getPublicSiteOrigin, resolveRuntimeEntryAppUrl } from "@/lib/first-party-inapp";
+import { getPublicSiteOrigin } from "@/lib/first-party-inapp";
 import { resolveRuntimePolicy } from "@/server/runtime-policy";
 
 type RuntimeHostTool = Pick<
@@ -72,7 +72,7 @@ function FatalState({
         </Link>
         {entry && entry.startsWith("/") ? (
           <a
-            href={resolveRuntimeEntryAppUrl(entry, getPublicSiteOrigin())}
+            href={entry}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-accent-amber hover:underline"
@@ -146,7 +146,7 @@ export default function ToolRuntimeHost({ tool }: { tool: RuntimeHostTool }) {
 
     const script = document.createElement("script");
     script.type = "module";
-    script.src = policy.entryAppUrl;
+    script.src = policy.entry;
     script.async = true;
     script.onerror = () => {
       setModuleErrorState({ key: runtimeKey, message: "Runtime module failed to load." });
@@ -239,7 +239,7 @@ export default function ToolRuntimeHost({ tool }: { tool: RuntimeHostTool }) {
 
   return (
     <iframe
-      src={policy.entryAppUrl}
+      src={policy.entry}
       title={`${tool.name} — runtime host`}
       className="w-full min-h-[75vh] bg-black"
       sandbox={policy.sandbox}
