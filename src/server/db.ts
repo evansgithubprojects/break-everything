@@ -442,7 +442,7 @@ async function migrateFirstPartyInAppTools(client: Client) {
     const prevEmbedAllowed = Number(r.embed_allowed ?? 0);
     const prevEmbedUrl = String(r.embed_url ?? "").trim();
     const prevDeliveryMode = String(r.delivery_mode ?? "download");
-    const tool = normalizeToolRow(r) as Tool;
+    const tool = normalizeToolRow(r) as unknown as Tool;
     const embed_allowed = 0;
     const embed_url = "";
 
@@ -814,6 +814,8 @@ interface ToolWriteInput {
 
 function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
   const normalizedCategories = normalizeCategories(tool.categories ?? []);
+  const runtimeTool =
+    (tool.runtime_supported ?? 0) > 0 || tool.delivery_mode === "browserRuntime";
   return {
     ...tool,
     categories: normalizedCategories,
@@ -832,8 +834,8 @@ function withToolDefaults(tool: ToolWriteInput): ToolWriteInput {
     vendor: tool.vendor ?? "",
     privacy_summary: tool.privacy_summary ?? "",
     data_handling: tool.data_handling ?? "medium",
-    review_notes: tool.review_notes ?? "",
-    last_reviewed_at: tool.last_reviewed_at ?? null,
+    review_notes: runtimeTool ? "" : tool.review_notes ?? "",
+    last_reviewed_at: runtimeTool ? null : tool.last_reviewed_at ?? null,
     github_url: tool.github_url ?? "",
   };
 }
@@ -982,7 +984,12 @@ export async function getTotalDownloads(): Promise<number> {
 
 export async function getReviewedToolCount(): Promise<number> {
   const row = await queryOne<{ count: number | string }>(
-    "SELECT COUNT(*) as count FROM tools WHERE last_reviewed_at IS NOT NULL AND TRIM(last_reviewed_at) != ''"
+    `SELECT COUNT(*) as count
+     FROM tools
+     WHERE last_reviewed_at IS NOT NULL
+       AND TRIM(last_reviewed_at) != ''
+       AND COALESCE(runtime_supported, 0) = 0
+       AND delivery_mode != 'browserRuntime'`
   );
   return Number(row?.count ?? 0);
 }

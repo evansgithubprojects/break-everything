@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 import type { Tool } from "@/types";
+import { isRuntimeTool } from "@/lib/tool-flags";
 import ToolIcon from "@/components/tools/ToolIcon";
 
 const AdminAnalyticsPanel = dynamic(
@@ -281,12 +282,13 @@ export default function AdminPage() {
           ) : (
             tools.map((tool) => (
               (() => {
+                const reviewRelevant = !isRuntimeTool(tool);
                 const staleDays = tool.last_reviewed_at
                   ? Math.floor(
                       (Date.now() - new Date(tool.last_reviewed_at).getTime()) / (1000 * 60 * 60 * 24)
                     )
                   : null;
-                const stale = staleDays == null || staleDays > 90;
+                const stale = reviewRelevant && (staleDays == null || staleDays > 90);
                 const categories =
                   Array.isArray(tool.categories) && tool.categories.length > 0
                     ? tool.categories
@@ -328,18 +330,22 @@ export default function AdminPage() {
                       <span className="text-xs text-foreground/40">
                         {categories.join(", ") || "uncategorized"}
                       </span>
-                      <span className="text-xs text-foreground/40">
-                        reviewed{" "}
-                        {tool.last_reviewed_at
-                          ? new Date(tool.last_reviewed_at).toLocaleDateString()
-                          : "—"}
-                      </span>
-                      <span
-                        className={`text-xs ${stale ? "text-yellow-400" : "text-foreground/40"}`}
-                        title="Tool trust metadata should be re-reviewed every 90 days"
-                      >
-                        {stale ? "review stale" : "review fresh"}
-                      </span>
+                      {reviewRelevant ? (
+                        <>
+                          <span className="text-xs text-foreground/40">
+                            reviewed{" "}
+                            {tool.last_reviewed_at
+                              ? new Date(tool.last_reviewed_at).toLocaleDateString()
+                              : "—"}
+                          </span>
+                          <span
+                            className={`text-xs ${stale ? "text-yellow-400" : "text-foreground/40"}`}
+                            title="Tool trust metadata should be re-reviewed every 90 days"
+                          >
+                            {stale ? "review stale" : "review fresh"}
+                          </span>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </div>

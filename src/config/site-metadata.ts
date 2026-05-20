@@ -5,7 +5,7 @@ export const SITE_NAME = "Break Everything";
 export const SITE_TAGLINE = "Break software costs, not your budget";
 
 export const DEFAULT_DESCRIPTION =
-  "Break Everything helps students break past expensive software by sharing free tools we review, explain in plain language, and link back to the people who build them.";
+  "Break Everything helps students break past expensive software by sharing free tools, explaining them in plain language, and linking back to the people who build them when there is a public project.";
 
 export const DEFAULT_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
 

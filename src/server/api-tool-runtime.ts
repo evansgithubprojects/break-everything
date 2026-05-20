@@ -18,12 +18,16 @@ export function parseToolRuntimeWrite(body: Record<string, unknown>, deliveryMod
   ok: true;
   value: ParsedToolRuntimeWrite;
 } | { ok: false; error: string } {
-  const fromCheckbox = Boolean(body.runtime_supported);
+  const fromCheckbox =
+    body.runtime_supported === true ||
+    body.runtime_supported === 1 ||
+    body.runtime_supported === "1" ||
+    body.runtime_supported === "true";
   const fromDelivery = deliveryMode === "browserRuntime";
-  const wantsRuntime = fromCheckbox || fromDelivery;
+  const wantsRuntimeConfig = fromCheckbox || fromDelivery;
   const runtimeName = normalizeRuntimeName(body.runtime_name);
 
-  if (wantsRuntime && !runtimeName) {
+  if (wantsRuntimeConfig && !runtimeName) {
     return {
       ok: false,
       error:
@@ -31,8 +35,8 @@ export function parseToolRuntimeWrite(body: Record<string, unknown>, deliveryMod
     };
   }
 
-  const runtimeSupported = wantsRuntime && runtimeName ? 1 : 0;
-  const storedName = wantsRuntime && runtimeName ? runtimeName : "";
+  const runtimeSupported = fromCheckbox && runtimeName ? 1 : 0;
+  const storedName = wantsRuntimeConfig && runtimeName ? runtimeName : "";
   const runtimeEntrypoint = storedName ? runtimeIndexHtmlPath(storedName) : "";
   const runtimeManifest = storedName ? defaultRuntimeManifestForName(storedName) : null;
   const sandbox_level: Tool["sandbox_level"] = runtimeSupported ? "trusted" : "strict";

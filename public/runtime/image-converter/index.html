@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Converter (Local Runtime)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #09090b;
+        color: #fafafa;
+      }
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .panel {
+        border: 1px solid #27272a;
+        background: #111114;
+        padding: 18px;
+      }
+      h1 {
+        font-size: 1.3rem;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 10px;
+        color: #a1a1aa;
+      }
+      .row {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      label {
+        font-size: 0.82rem;
+        color: #d4d4d8;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #3f3f46;
+        background: #18181b;
+        color: #fafafa;
+        padding: 10px;
+        font-size: 0.92rem;
+      }
+      button {
+        cursor: pointer;
+        background: #27272a;
+      }
+      button.primary {
+        background: #e8933a;
+        border-color: #e8933a;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+      progress {
+        width: 100%;
+        height: 14px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        color: #e4e4e7;
+        white-space: pre-wrap;
+        max-height: 220px;
+        overflow: auto;
+        border: 1px solid #27272a;
+        padding: 10px;
+        background: #09090b;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="panel">
+        <h1>Image Converter</h1>
+        <p>
+          Conversion runs in your browser using ffmpeg. Files stay local and are never uploaded by this tool.
+        </p>
+        <div class="row">
+          <label for="source">Source file</label>
+          <input id="source" type="file" accept="image/*" />
+        </div>
+        <div class="grid row">
+          <div>
+            <label for="format">Output format</label>
+            <select id="format">
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/tiff">TIFF</option>
+            </select>
+          </div>
+          <div>
+            <label for="quality">Quality</label>
+            <select id="quality">
+              <option value="high">High</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="small">Smaller file</option>
+            </select>
+          </div>
+        </div>
+        <div class="row actions">
+          <button id="convert" class="primary" disabled>Convert file</button>
+          <button id="reset">Reset</button>
+        </div>
+        <div class="row">
+          <progress id="progress" max="1" value="0"></progress>
+          <p id="status"></p>
+        </div>
+        <div class="row">
+          <a id="download" href="#" download style="display: none">Download converted file</a>
+        </div>
+        <div class="row">
+          <div id="logs" class="mono"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/runtime/image-converter/runtime.js"></script>
+  </body>
+</html>

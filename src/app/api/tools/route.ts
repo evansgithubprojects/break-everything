@@ -179,6 +179,8 @@ export async function POST(request: NextRequest) {
     lastReviewedRaw == null || String(lastReviewedRaw).trim() === ""
       ? null
       : String(lastReviewedRaw);
+  const reviewNotes = runtimeSupported ? "" : String(body.review_notes ?? "").trim();
+  const effectiveLastReviewedAt = runtimeSupported ? null : lastReviewedAt;
 
   try {
     const result = await createTool({
@@ -205,8 +207,8 @@ export async function POST(request: NextRequest) {
       vendor: String(body.vendor ?? "").trim(),
       privacy_summary: String(body.privacy_summary ?? "").trim(),
       data_handling: dataHandling,
-      review_notes: String(body.review_notes ?? "").trim(),
-      last_reviewed_at: lastReviewedAt,
+      review_notes: reviewNotes,
+      last_reviewed_at: effectiveLastReviewedAt,
       github_url: githubUrl,
       platform: String(body.platform ?? "").trim() || "windows",
     });

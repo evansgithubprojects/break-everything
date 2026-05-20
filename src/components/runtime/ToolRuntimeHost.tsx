@@ -226,7 +226,7 @@ export default function ToolRuntimeHost({ tool }: { tool: RuntimeHostTool }) {
     return (
       <div className="space-y-4">
         <div className="glass-card p-4 text-sm text-foreground/60">
-          Running module runtime mode. This mode is enabled only for vetted tools and can be disabled at any
+          Running module runtime mode. This mode is enabled only for explicitly allowed tools and can be disabled at any
           time.
         </div>
         <div

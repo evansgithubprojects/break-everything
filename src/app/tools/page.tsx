@@ -73,7 +73,7 @@ export default function ToolsPage() {
             All Tools
           </h1>
           <p className="text-foreground/50">
-            Free tools we&apos;ve tried to vet for schoolwork and side projects.
+            Free tools for schoolwork and side projects, including hosted browser runtimes and linked project tools.
           </p>
         </div>
 

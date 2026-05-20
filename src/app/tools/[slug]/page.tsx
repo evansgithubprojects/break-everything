@@ -6,6 +6,7 @@ import FavoriteToggle from "@/components/tools/FavoriteToggle";
 import ToolIcon from "@/components/tools/ToolIcon";
 import TrustPanel from "@/components/tools/TrustPanel";
 import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/config";
+import { isRuntimeTool as isRuntimeToolFlag } from "@/lib/tool-flags";
 import { getToolBySlug } from "@/server/db";
 import type { Tool } from "@/types";
 
@@ -82,7 +83,7 @@ export default async function ToolDetailPage({
   const platformBadges = tool.platform.split(",").map((p) => p.trim());
   const githubUrl = String(tool.github_url ?? "").trim();
   const isBrowserRuntime = tool.delivery_mode === "browserRuntime";
-  const isRuntimeTool = isBrowserRuntime || Number(tool.runtime_supported) > 0;
+  const isRuntimeTool = isRuntimeToolFlag(tool);
   const categories =
     Array.isArray(tool.categories) && tool.categories.length > 0
       ? tool.categories
@@ -129,7 +130,7 @@ export default async function ToolDetailPage({
               {isRuntimeTool ? (
                 <span
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-semibold border-2 border-accent-amber/40 bg-accent-amber/10 text-accent-amber tracking-wide"
-                  title={`Hosted and reviewed on ${SITE_NAME}`}
+                  title={`Hosted on ${SITE_NAME}`}
                 >
                   <svg
                     className="w-3.5 h-3.5 shrink-0 opacity-95"
@@ -205,7 +206,7 @@ export default async function ToolDetailPage({
                     ))}
                   </div>
                 </div>
-                {!isBrowserRuntime ? (
+                {!isRuntimeTool ? (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-foreground/50">Last reviewed</span>
                     <span className="text-sm text-foreground">

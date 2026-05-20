@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
+import { isRuntimeTool } from "@/lib/tool-flags";
 import type { Tool, ToolDeliveryMode, ToolKind } from "@/types";
 
 function CollapsibleSection({
@@ -157,8 +158,8 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         vendor: form.vendor,
         privacy_summary: form.privacy_summary,
         data_handling: form.data_handling,
-        review_notes: form.review_notes,
-        last_reviewed_at: form.last_reviewed_at,
+        review_notes: runtimeRelevant ? "" : form.review_notes,
+        last_reviewed_at: runtimeRelevant ? "" : form.last_reviewed_at,
       };
 
       const res = await fetch(url, {
@@ -192,15 +193,20 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
 
   const { runtimeRelevant, mobileStoresDefaultOpen, trustDefaultOpen } = useMemo(() => {
     const delivery = form.delivery_mode as ToolDeliveryMode;
-    const runtimeRelevantInner = delivery === "browserRuntime" || form.runtime_supported;
+    const runtimeRelevantInner = isRuntimeTool({
+      delivery_mode: delivery,
+      runtime_supported: form.runtime_supported ? 1 : 0,
+    });
     const platformLooksMobile = /ios|android/i.test(form.platform);
     const mobileStoresOpen = hasStoreDraft || platformLooksMobile;
-    const trustOpen = Boolean(
-      String(form.vendor).trim() ||
-        String(form.privacy_summary).trim() ||
-        String(form.review_notes).trim() ||
-        String(form.last_reviewed_at).trim()
-    );
+    const trustOpen =
+      !runtimeRelevantInner &&
+      Boolean(
+        String(form.vendor).trim() ||
+          String(form.privacy_summary).trim() ||
+          String(form.review_notes).trim() ||
+          String(form.last_reviewed_at).trim()
+      );
     return {
       runtimeRelevant: runtimeRelevantInner,
       mobileStoresDefaultOpen: mobileStoresOpen,
@@ -406,7 +412,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         </div>
       ) : null}
 
-      {!isBrowserRuntime ? (
+      {!runtimeRelevant ? (
         <CollapsibleSection
           key={`stores-${mobileStoresDefaultOpen}`}
           title="App Store & Google Play"
@@ -456,8 +462,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         {runtimeRelevant ? (
           <div>
             <label className={labelClass}>
-              Runtime folder name {requiredMark}
-              <span className="text-foreground/40 font-normal"> (loads public/runtime/[name]/index.html)</span>
+              Runtime name {requiredMark}
             </label>
             <input
               type="text"
@@ -477,7 +482,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
         )}
       </CollapsibleSection>
 
-      {!isBrowserRuntime ? (
+      {!runtimeRelevant ? (
         <CollapsibleSection
           key={`trust-${trustDefaultOpen}`}
           title="Trust & review"

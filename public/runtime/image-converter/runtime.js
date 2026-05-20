@@ -34,48 +34,32 @@ function outputName(fileName, ext) {
   return `${base || "converted"}.${ext}`;
 }
 
+function outputExtension(format) {
+  if (format === "image/jpeg") return "jpg";
+  if (format === "image/png") return "png";
+  if (format === "image/webp") return "webp";
+  if (format === "image/tiff") return "tiff";
+  return "bin";
+}
+
 function buildArgs(inName, outName, format, quality) {
-  if (format === "gif") {
-    return ["-i", inName, "-vf", "fps=12,scale=720:-1:flags=lanczos", outName];
+  const scale = quality === "small" ? ["-vf", "scale='min(1600,iw)':-2"] : [];
+  if (format === "image/jpeg") {
+    const q = quality === "high" ? "2" : quality === "small" ? "8" : "5";
+    return ["-i", inName, ...scale, "-frames:v", "1", "-q:v", q, outName];
   }
-
-  if (format === "webm") {
-    const crf = quality === "high" ? "28" : quality === "small" ? "38" : "33";
-    return [
-      "-i",
-      inName,
-      "-c:v",
-      "libvpx-vp9",
-      "-crf",
-      crf,
-      "-b:v",
-      "0",
-      "-c:a",
-      "libopus",
-      outName,
-    ];
+  if (format === "image/png") {
+    const compression = quality === "high" ? "3" : quality === "small" ? "9" : "6";
+    return ["-i", inName, ...scale, "-frames:v", "1", "-compression_level", compression, outName];
   }
-
-  const crf = quality === "high" ? "20" : quality === "small" ? "30" : "24";
-  const args = [
-    "-i",
-    inName,
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    crf,
-    "-c:a",
-    "aac",
-    "-movflags",
-    "+faststart",
-    outName,
-  ];
-  if (format === "mp4" || format === "mov") {
-    return args;
+  if (format === "image/webp") {
+    const q = quality === "high" ? "92" : quality === "small" ? "70" : "82";
+    return ["-i", inName, ...scale, "-frames:v", "1", "-c:v", "libwebp", "-quality", q, outName];
   }
-  throw new Error(`Unsupported video format: ${format}`);
+  if (format === "image/tiff") {
+    return ["-i", inName, ...scale, "-frames:v", "1", "-compression_algo", "deflate", outName];
+  }
+  throw new Error(`Unsupported image format: ${format}`);
 }
 
 async function loadRuntime() {
@@ -110,15 +94,15 @@ async function convert() {
 
   const file = sourceEl.files?.[0];
   if (!file) {
-    setStatus("Select a video file first.");
+    setStatus("Select an image file first.");
     return;
   }
 
   const targetFormat = String(formatEl.value);
   const quality = String(qualityEl.value);
-  const inputExt = file.name.split(".").pop() || "mp4";
+  const inputExt = file.name.split(".").pop() || "png";
   const inputName = `input.${inputExt}`;
-  const outName = outputName(file.name, targetFormat);
+  const outName = outputName(file.name, outputExtension(targetFormat));
   const args = buildArgs(inputName, outName, targetFormat, quality);
 
   convertEl.disabled = true;

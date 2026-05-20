@@ -182,8 +182,38 @@ describe("Tools CRUD", () => {
     expect(total).toBe(12450 + 8320 + 5640);
   });
 
-  it("getReviewedToolCount returns count of tools with review dates", async () => {
+  it("getReviewedToolCount returns count of non-runtime tools with review dates", async () => {
     expect(await getReviewedToolCount()).toBe(3);
+
+    await createTool({
+      name: "RuntimeReviewed",
+      slug: "runtime-reviewed",
+      description: "Runtime tool with stale imported review metadata",
+      short_description: "Runtime",
+      categories: ["runtime"],
+      icon: "🧪",
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      download_url: "",
+      web_url: "https://example.com/runtime",
+      app_store_url: "",
+      play_store_url: "",
+      embed_allowed: 0,
+      embed_url: "",
+      runtime_supported: 1,
+      runtime_entrypoint: "https://example.com/runtime",
+      sandbox_level: "strict",
+      trusted_domains: "example.com",
+      vendor: "",
+      privacy_summary: "",
+      data_handling: "medium",
+      review_notes: "should not count",
+      last_reviewed_at: "2026-01-01",
+      github_url: "",
+      platform: "web",
+    });
+    expect(await getReviewedToolCount()).toBe(3);
+    await deleteTool("runtime-reviewed");
   });
 
   it("getSourceLinkedToolStats counts tools with non-empty github_url", async () => {

@@ -88,6 +88,15 @@ describe("/tools/[slug]/run route", () => {
     expect(metadata.other).toBeUndefined();
   });
 
+  it("generateMetadata returns comeback metadata when runtime_supported is false", async () => {
+    mockedGetToolBySlug.mockResolvedValue(makeTool({ runtime_supported: 0 }));
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "runtime-tool" }) });
+    expect(metadata.title).toBe("Runtime Tool — try online coming soon");
+    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(mockedResolveRuntimeRollout).not.toHaveBeenCalled();
+  });
+
   it("calls notFound when tool is missing", async () => {
     mockedGetToolBySlug.mockResolvedValue(undefined);
 
@@ -107,6 +116,18 @@ describe("/tools/[slug]/run route", () => {
         params: Promise.resolve({ slug: "runtime-tool" }),
       })
     ).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("renders explanation page when runtime_supported is false", async () => {
+    mockedGetToolBySlug.mockResolvedValue(makeTool({ runtime_supported: 0 }));
+
+    const page = await ToolRuntimePage({
+      params: Promise.resolve({ slug: "runtime-tool" }),
+    });
+
+    expect((page as { props: { tool: Tool } }).props.tool.runtime_supported).toBe(0);
+    expect(mockedResolveRuntimeRollout).not.toHaveBeenCalled();
+    expect(mockedNotFound).not.toHaveBeenCalled();
   });
 
   it("renders runtime page when tool exists and rollout is enabled", async () => {

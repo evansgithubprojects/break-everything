@@ -44,7 +44,7 @@ export default async function HomePage() {
           </h1>
           <p className="mx-auto max-w-2xl text-base md:text-lg text-foreground/60 leading-relaxed mb-10 md:mb-12">
             Break Everything exists to help students break past expensive software costs with free tools that actually do the job.
-            We test each pick, explain what it does, and point you to the people behind it.
+            We explain what each tool does, highlight where it runs, and point you to the people behind it when there is a public project.
           </p>
 
           <div className="flex flex-col items-center gap-4 mb-16">
@@ -84,7 +84,7 @@ export default async function HomePage() {
               <div className="text-2xl md:text-3xl font-bold gradient-text">
                 {reviewedToolCount}
               </div>
-              <div className="text-xs text-foreground/40 mt-1">Reviewed Tools</div>
+              <div className="text-xs text-foreground/40 mt-1">Reviewed Non-Runtime Tools</div>
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">
@@ -107,9 +107,9 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Checked before we list</h3>
+            <h3 className="font-semibold text-foreground mb-2">Clear before you click</h3>
             <p className="text-sm text-foreground/50">
-              We read the basics, try the tool when we can, and link to where it comes from so you can decide if it fits your work.
+              We describe how each listing runs and separate hosted browser runtimes from tools that need a separate download or project page.
             </p>
           </div>
 

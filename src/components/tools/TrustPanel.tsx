@@ -1,14 +1,15 @@
 import { SITE_NAME, SITE_TAGLINE } from "@/config";
+import { isRuntimeTool } from "@/lib/tool-flags";
 import type { Tool } from "@/types";
 
 export default function TrustPanel({ tool }: { tool: Tool }) {
-  const isBrowserRuntime = tool.delivery_mode === "browserRuntime";
+  const runtimeTool = isRuntimeTool(tool);
   const reviewDate = tool.last_reviewed_at
     ? new Date(tool.last_reviewed_at).toLocaleDateString("en-US")
     : "Not reviewed yet";
 
-  const vendorDisplay = isBrowserRuntime ? SITE_NAME : tool.vendor || "Unknown";
-  const privacyDisplay = isBrowserRuntime
+  const vendorDisplay = runtimeTool ? SITE_NAME : tool.vendor || "Unknown";
+  const privacyDisplay = runtimeTool
     ? `${SITE_NAME} runs this tool in your browser on our domain. ${SITE_TAGLINE}`
     : tool.privacy_summary || "No privacy summary provided.";
 
@@ -18,7 +19,7 @@ export default function TrustPanel({ tool }: { tool: Tool }) {
         Transparency
       </h3>
       <p className="text-sm text-foreground/55">
-        {isBrowserRuntime
+        {runtimeTool
           ? `${SITE_NAME} lists browser runtime tools we host ourselves so you know where the experience runs.`
           : "Break Everything strongly prefers source-linked tools and shows what we checked, so you can break software costs without guessing what is behind the listing."}
       </p>
@@ -32,9 +33,11 @@ export default function TrustPanel({ tool }: { tool: Tool }) {
         <p>
           <span className="text-foreground/45">Privacy:</span> {privacyDisplay}
         </p>
-        <p>
-          <span className="text-foreground/45">Last reviewed:</span> {reviewDate}
-        </p>
+        {!runtimeTool ? (
+          <p>
+            <span className="text-foreground/45">Last reviewed:</span> {reviewDate}
+          </p>
+        ) : null}
       </div>
     </div>
   );

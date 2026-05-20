@@ -365,7 +365,7 @@ describe("Tools API", () => {
     const data = await getRes.json();
     expect(data.tool.tool_kind).toBe("web");
     expect(data.tool.web_url).toBe("");
-    expect(data.tool.runtime_supported).toBe(1);
+    expect(data.tool.runtime_supported).toBe(0);
     expect(data.tool.runtime_name).toBe("no-external-url");
     expect(data.tool.runtime_entrypoint).toBe("/runtime/no-external-url/index.html");
   });
@@ -399,7 +399,10 @@ describe("Tools API", () => {
       tool_kind: "web",
       delivery_mode: "browserRuntime",
       web_url: "https://app.example.com/runtime-tool",
+      runtime_supported: true,
       runtime_name: "runtime-tool",
+      review_notes: "runtime tools should not retain review metadata",
+      last_reviewed_at: "2026-01-01",
       github_url: "https://github.com/test/runtime-tool",
       platform: "web",
     });
@@ -414,6 +417,8 @@ describe("Tools API", () => {
     expect(data.tool.runtime_supported).toBe(1);
     expect(data.tool.runtime_name).toBe("runtime-tool");
     expect(data.tool.runtime_entrypoint).toBe("/runtime/runtime-tool/index.html");
+    expect(data.tool).not.toHaveProperty("review_notes");
+    expect(data.tool.last_reviewed_at).toBeNull();
   });
 
   it("POST /api/tools rejects browserRuntime without runtime_name", async () => {
