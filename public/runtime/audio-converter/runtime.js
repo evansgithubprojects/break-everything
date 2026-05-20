@@ -13,6 +13,7 @@ const logsEl = document.getElementById("logs");
 
 let ffmpeg = null;
 let runtimeLoaded = false;
+let loadFailed = false;
 let lastObjectUrl = "";
 
 function setStatus(text) {
@@ -33,48 +34,33 @@ function outputName(fileName, ext) {
   return `${base || "converted"}.${ext}`;
 }
 
+function outputMimeType(format) {
+  if (format === "mp3") return "audio/mpeg";
+  if (format === "wav") return "audio/wav";
+  if (format === "aac") return "audio/aac";
+  if (format === "flac") return "audio/flac";
+  if (format === "ogg") return "audio/ogg";
+  return "application/octet-stream";
+}
+
 function buildArgs(inName, outName, format, quality) {
-  if (format === "gif") {
-    return ["-i", inName, "-vf", "fps=12,scale=720:-1:flags=lanczos", outName];
+  const bitrate = quality === "high" ? "320k" : quality === "small" ? "128k" : "192k";
+  if (format === "mp3") {
+    return ["-i", inName, "-vn", "-c:a", "libmp3lame", "-b:a", bitrate, outName];
   }
-
-  if (format === "webm") {
-    const crf = quality === "high" ? "28" : quality === "small" ? "38" : "33";
-    return [
-      "-i",
-      inName,
-      "-c:v",
-      "libvpx-vp9",
-      "-crf",
-      crf,
-      "-b:v",
-      "0",
-      "-c:a",
-      "libopus",
-      outName,
-    ];
+  if (format === "wav") {
+    return ["-i", inName, "-vn", "-c:a", "pcm_s16le", outName];
   }
-
-  const crf = quality === "high" ? "20" : quality === "small" ? "30" : "24";
-  const args = [
-    "-i",
-    inName,
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    crf,
-    "-c:a",
-    "aac",
-    "-movflags",
-    "+faststart",
-    outName,
-  ];
-  if (format === "mp4" || format === "mov") {
-    return args;
+  if (format === "aac") {
+    return ["-i", inName, "-vn", "-c:a", "aac", "-b:a", bitrate, outName];
   }
-  throw new Error(`Unsupported video format: ${format}`);
+  if (format === "flac") {
+    return ["-i", inName, "-vn", "-c:a", "flac", outName];
+  }
+  if (format === "ogg") {
+    return ["-i", inName, "-vn", "-c:a", "libvorbis", "-b:a", bitrate, outName];
+  }
+  throw new Error(`Unsupported audio format: ${format}`);
 }
 
 async function loadRuntime() {
@@ -109,13 +95,13 @@ async function convert() {
 
   const file = sourceEl.files?.[0];
   if (!file) {
-    setStatus("Select a video file first.");
+    setStatus("Select an audio file first.");
     return;
   }
 
   const targetFormat = String(formatEl.value);
   const quality = String(qualityEl.value);
-  const inputExt = file.name.split(".").pop() || "mp4";
+  const inputExt = file.name.split(".").pop() || "mp3";
   const inputName = `input.${inputExt}`;
   const outName = outputName(file.name, targetFormat);
   const args = buildArgs(inputName, outName, targetFormat, quality);
@@ -130,7 +116,7 @@ async function convert() {
     await ffmpeg.exec(args);
     const outData = await ffmpeg.readFile(outName);
     const blob = new Blob([outData.buffer], {
-      type: targetFormat,
+      type: outputMimeType(targetFormat),
     });
 
     if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);

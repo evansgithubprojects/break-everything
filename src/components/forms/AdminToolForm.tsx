@@ -196,6 +196,7 @@ export default function AdminToolForm({ tool, onSave, onCancel }: AdminToolFormP
     const runtimeRelevantInner = isRuntimeTool({
       delivery_mode: delivery,
       runtime_supported: form.runtime_supported ? 1 : 0,
+      runtime_name: form.runtime_name,
     });
     const platformLooksMobile = /ios|android/i.test(form.platform);
     const mobileStoresOpen = hasStoreDraft || platformLooksMobile;

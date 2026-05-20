@@ -13,7 +13,6 @@ const logsEl = document.getElementById("logs");
 
 let ffmpeg = null;
 let runtimeLoaded = false;
-let loadFailed = false;
 let lastObjectUrl = "";
 
 function setStatus(text) {

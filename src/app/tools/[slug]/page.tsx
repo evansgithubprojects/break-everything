@@ -168,7 +168,7 @@ export default async function ToolDetailPage({
               </p>
             </div>
 
-            <TrustPanel tool={tool} />
+            {!isRuntimeTool ? <TrustPanel tool={tool} /> : null}
           </div>
 
           {/* Sidebar */}
