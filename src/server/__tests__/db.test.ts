@@ -30,6 +30,7 @@ import {
   verifyAdminPassword,
   getCategories,
   getToolCount,
+  getBuiltByUsToolCount,
   getReviewedToolCount,
   getSourceLinkedToolStats,
   getTotalDownloads,
@@ -220,6 +221,46 @@ describe("Tools CRUD", () => {
     const s = await getSourceLinkedToolStats();
     expect(s.total).toBe(3);
     expect(s.linked).toBe(3);
+  });
+
+  it("counts runtime tools as built by us and project-linked", async () => {
+    expect(await getBuiltByUsToolCount()).toBe(0);
+
+    await createTool({
+      name: "First Party Runtime",
+      slug: "first-party-runtime",
+      description: "Runtime tool without a public project link",
+      short_description: "Runtime",
+      categories: ["runtime"],
+      icon: "🧪",
+      tool_kind: "web",
+      delivery_mode: "browserRuntime",
+      download_url: "",
+      web_url: "",
+      app_store_url: "",
+      play_store_url: "",
+      embed_allowed: 0,
+      embed_url: "",
+      runtime_supported: 0,
+      runtime_name: "first-party-runtime",
+      runtime_entrypoint: "/runtime/first-party-runtime/index.html",
+      sandbox_level: "strict",
+      trusted_domains: "",
+      vendor: "",
+      privacy_summary: "",
+      data_handling: "medium",
+      review_notes: "",
+      last_reviewed_at: null,
+      github_url: "",
+      platform: "web",
+    });
+
+    const s = await getSourceLinkedToolStats();
+    expect(await getBuiltByUsToolCount()).toBe(1);
+    expect(s.total).toBe(4);
+    expect(s.linked).toBe(4);
+
+    await deleteTool("first-party-runtime");
   });
 
   it("createTool adds a new tool", async () => {

@@ -994,7 +994,17 @@ export async function getReviewedToolCount(): Promise<number> {
   return Number(row?.count ?? 0);
 }
 
-/** Tools with a non-empty project URL (trust signal that every pick links somewhere public). */
+export async function getBuiltByUsToolCount(): Promise<number> {
+  const row = await queryOne<{ count: number | string }>(
+    `SELECT COUNT(*) as count
+     FROM tools
+     WHERE COALESCE(runtime_supported, 0) > 0
+        OR delivery_mode = 'browserRuntime'`
+  );
+  return Number(row?.count ?? 0);
+}
+
+/** Tools with a public project URL or first-party runtime backing. */
 export async function getSourceLinkedToolStats(): Promise<{
   linked: number;
   total: number;
@@ -1002,7 +1012,10 @@ export async function getSourceLinkedToolStats(): Promise<{
   const row = await queryOne<{ total: number | string; linked: number | string }>(`
     SELECT
       (SELECT COUNT(*) FROM tools) AS total,
-      (SELECT COUNT(*) FROM tools WHERE TRIM(COALESCE(github_url, '')) != '') AS linked
+      (SELECT COUNT(*) FROM tools
+       WHERE TRIM(COALESCE(github_url, '')) != ''
+          OR COALESCE(runtime_supported, 0) > 0
+          OR delivery_mode = 'browserRuntime') AS linked
   `);
   return {
     total: Number(row?.total ?? 0),

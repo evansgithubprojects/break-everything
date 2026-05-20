@@ -3,7 +3,7 @@ import BounceInsightTracker from "@/components/analytics/BounceInsightTracker";
 import ToolCard from "@/components/tools/ToolCard";
 import {
   getAllTools,
-  getReviewedToolCount,
+  getBuiltByUsToolCount,
   getSourceLinkedToolStats,
   getToolCount,
 } from "@/server/db";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const tools = (await getAllTools()) as unknown as Tool[];
   const toolCount = await getToolCount();
-  const reviewedToolCount = await getReviewedToolCount();
+  const builtByUsToolCount = await getBuiltByUsToolCount();
   const { linked: sourceLinkedCount, total: sourceTotal } =
     await getSourceLinkedToolStats();
   const sourceLinkPct =
@@ -82,9 +82,9 @@ export default async function HomePage() {
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">
-                {reviewedToolCount}
+                {builtByUsToolCount}
               </div>
-              <div className="text-xs text-foreground/40 mt-1">Reviewed Non-Runtime Tools</div>
+              <div className="text-xs text-foreground/40 mt-1">Built By Us</div>
             </div>
             <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">
